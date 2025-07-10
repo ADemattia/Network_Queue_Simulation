@@ -1,9 +1,8 @@
 classdef classicQueue < queue
-    % classicQueue è una classe concreta di queue e rappresenta una coda
-    % con politica accept-reject rispetto alla capacità 
+    % coda classica con politica accept/reject su base capacità 
     
     properties
-        capacity
+        capacity % numero massimo customer 
     end
     
     methods
@@ -15,23 +14,30 @@ classdef classicQueue < queue
             obj.capacity = capacity; 
         end
 
+        % gestione nuovo customer 
         function arrivalManagment(obj, customer)
-            customer.path(end + 1) = obj.id;
-            customer.startTime(obj.id) = obj.clock; % tempo di entrata in coda 
-            % politica di rifiuto 
-            if obj.lengthQueue < obj.capacity
-                obj.customerList(end + 1) = customer;
-                obj.lengthQueue = obj.lengthQueue + 1;
 
-                obj.count = obj.count + 1;  % se customer accettato, si aggiunge nel conteggio totale  
+            % aggiornamento path ed eventi customer 
+            customer.path(end + 1) = obj.id;
+            customer.startTime(obj.id) = obj.clock;
+
+            % politica di accettazione 
+            if obj.lengthQueue < obj.capacity 
+                % inserimento in coda 
+                obj.customerList(end + 1) = customer;
+
+                % aggiornamento conteggio
+                obj.lengthQueue = obj.lengthQueue + 1; 
+                obj.count = obj.count + 1;   
 
             else % obj.lengthQueue == obj.capacity - tutto occupato 
                 obj.lostCustomer = obj.lostCustomer + 1; 
             end 
         end
 
+        % la coda può accogliere nuovo customer da server? 
         function isAvailable = isQueueAvailable(obj)
-            if obj.waitingFlag == false % ovvero il customer va subito dentro
+            if obj.waitingFlag == false % il customer non aspetta, entra subito 
                 isAvailable = true; 
             elseif obj.waitingFlag == true % il customer può aspettare nel server 
                 if obj.lengthQueue < obj.capacity

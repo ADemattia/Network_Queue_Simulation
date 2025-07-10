@@ -6,8 +6,8 @@ classdef (Abstract) server < handle
         id
         clock 
          
-        destinationQueue % coda arrivo (unica) 
-        previousQueues % code precedenti (anche più di una) 
+        destinationQueue  % coda arrivo (unica) 
+        previousQueues  % code precedenti (anche più di una) 
         numPreviousQueues % numero code precedenti 
         selectedQueue % coda selezionata per servizio 
         
@@ -20,7 +20,7 @@ classdef (Abstract) server < handle
         serverDistribution % distribuzione tempi di completamento 
         eventServer % server associato al primo evento 
         
-        notFullyOccupied % variabile 0/1: almeno un server è libero (1) 
+        notFullyOccupied % indica se è disponibile almeno un servitore (1)  
  
         exitWaitingList % lista customer in uscita 
 
@@ -29,13 +29,13 @@ classdef (Abstract) server < handle
 
         count % conteggio customer 
 
-        % vettori per calcolo tempo in uno stato del server
+        % vettori per calcolo tempo in uno stato dei server
         timeInFree
         timeInWorking
         timeInWaiting
         timeInStuck
 
-        clockPreviousState % variabile ausiliaria 
+        clockPreviousState  % variabile ausiliaria 
     end
     
     methods
@@ -79,7 +79,7 @@ classdef (Abstract) server < handle
         end
 
 
-        % dato un customer trova l'indice del server associato 
+        % funzione ausiliaria per ricerca customer 
         function [found, serverId] = getServerFromCustomer(obj, targetCustomer)
             found = false; 
             serverId = [];
@@ -95,7 +95,7 @@ classdef (Abstract) server < handle
 
         % COMMENTO : si potrebbe raffinare sul tipo di customer
         function exitAllowed = canExit(obj) % indica se un lavoro finito può uscire        
-            if isempty(obj.exitWaitingList)
+            if isempty(obj.exitWaitingList) 
                 exitAllowed = false;
                 return;
             end
@@ -105,6 +105,7 @@ classdef (Abstract) server < handle
             exitAllowed = isAvailable; % possibilità uscita da server
         end 
     
+        % funzione ausiliaria per calcolo 
         function updateServerTime(obj, serverId, externalClock)
 
             % calcola il tempo trascorso dall'ultimo aggiornamento
@@ -128,10 +129,10 @@ classdef (Abstract) server < handle
     end 
 
     methods (Abstract)
-         [servicePossible, selectedCustomer] = checkAvailability(obj); % il server può iniziare un nuovo lavoro
-         scheduleNextEvents(obj,customer,externalClock);
-         addWaiting(obj);  
-         exitCustomer(obj); 
+         [servicePossible, selectedCustomer] = checkAvailability(obj); % server può iniziare nuovo lavoro? 
+         scheduleNextEvents(obj,customer,externalClock); % schedulazione nuovo completmento
+         addWaiting(obj, externalClock);  % porta un customer nella coda dei wait
+         exitCustomer(obj, externalClock); % fa uscire un customer 
          clearServer(obj); 
     end
 

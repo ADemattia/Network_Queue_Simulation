@@ -1,37 +1,36 @@
 classdef simulator < handle
-    %SIMULATOR Summary of this class goes here
-    %   Detailed explanation goes here
+    % simulatore a eventi discreti per reti di code (generatori, code, server)
     
     properties
-        externalClock
-        horizon
+        externalClock   % orologio globale della simulazione
+        horizon         % tempo di termine della simulazione
         
-        queueNodes % array entità: code, generatori, server
-        queueArray % array code 
+        queueNodes  % cell array di oggetti: generatori, code, server
+        queueArray  % array di sole code, usato per statistiche di coda 
         
-        queueGraph % Matrice di adiacenza per descrizione network di code 
-        eventsList
+        queueGraph % matrice di adiacenza che descrive le connessioni tra nodi
+        eventsList % vettore dei tempi dei prossimi eventi per generatori e server
          
-        endQueue % coda finale accumulo a fine sistema 
+        endQueue % coda finale in cui si accumulano i clienti usciti dall'ultimo server 
 
-        displayFlag % flag per vedere la dinamica 
+        displayFlag % flag di visualizzazione degli eventi  
     end
     
     methods
         function obj = simulator(horizon,queueNodes,queueGraph, displayFlag)
             % istanziazioni di default
-            obj.externalClock = 0; 
+            obj.externalClock = 0; % orologgio settato a zero
             numEntities = length(queueNodes); 
-            obj.eventsList = inf(numEntities,1);
+            obj.eventsList = inf(numEntities,1); % lista eventi inizializzata a inf 
 
-            obj.horizon = horizon; 
+            obj.horizon = horizon;  % orizzonete temporale 
             obj.queueNodes = queueNodes; 
             obj.queueArray = [obj.queueNodes{cellfun(@(x) isa(x, 'queue'), obj.queueNodes)}]; 
             obj.queueGraph = queueGraph;
             obj.displayFlag = displayFlag; 
 
             waitingFlag = false; 
-            obj.endQueue = classicQueue(1, waitingFlag, inf); % coda classica a capacità infinita 
+            obj.endQueue = classicQueue(1, waitingFlag, inf); % setup coda finale - collector 
         end
 
         function networkSetUp(obj)
@@ -41,15 +40,16 @@ classdef simulator < handle
                 node = obj.queueNodes{i};
 
                 if isa(node, 'generator')
-                    % cerca coda a cui è collegato da matrice adiancenza 
+                    % trova coda di destinazione e assegna al generatore
                     queueId = find(obj.queueGraph(i, :) == 1); 
                     node.queueAssignment(obj.queueNodes{queueId}, networkLength); 
 
                 elseif isa(node, 'queue')
+                    % assegna server di destinazione
                     destinationServerId = find(obj.queueGraph(i, :) == 1);
                     node.destinationServerAssignment(obj.queueNodes{destinationServerId}); 
 
-                    % assegnazione server e generatori precedenti queue 
+                    % trova generatori e server precedenti e assegna
                     previousEntitiesId = find(obj.queueGraph(:, i) == 1);
                     previousGeneratorsId = []; 
                     previousServersId = [];
@@ -78,7 +78,7 @@ classdef simulator < handle
                     
                     % server terminale
                     if i == networkLength % server finale
-                        node.destinationQueueAssignment(obj.endQueue) % i customer finiscono nella coda di accumulo finale
+                        node.destinationQueueAssignment(obj.endQueue) % i customer finiscono nella coda collector 
                     else
                         destinationQueueId = find(obj.queueGraph(i, :) == 1);
                         node.destinationQueueAssignment(obj.queueNodes{destinationQueueId});
@@ -99,10 +99,9 @@ classdef simulator < handle
             % setup primi eventi 
             for i = 1 : length(obj.queueNodes)
                 node = obj.queueNodes{i};
-                % code non influenzano contatore, sono solo contenitori
-                % eventi sono dettati da generator e server 
                 if isa(node, 'queue')
                     % non fare nulla 
+                    % code non influenzano evneti 
                 else % server e generator 
                      obj.eventsList(i) = node.clock; 
                 end
@@ -110,7 +109,11 @@ classdef simulator < handle
 
             contatore = 0; 
             while obj.externalClock < obj.horizon
+
+                % tempo e id prossimo evento
                 [nextEvent, nextId] = min(obj.eventsList);
+
+                % entità prossimo evento 
                 eventNode = obj.queueNodes{nextId};
 
                 if obj.displayFlag == true 
@@ -136,71 +139,89 @@ classdef simulator < handle
                     end
                     
                     fprintf('Prossimo evento: Nodo %d (%s)\n', nextId, nodeType );
-                    fprintf('\n');  
-                    
+                    fprintf('\n');          
                     contatore = contatore + 1;
                 end
 
                 % prossimo evento 
                 obj.externalClock = nextEvent; 
 
-                for k = 1:length(obj.queueArray) % aggiorniamo i clock di ogni coda 
-                    queueToClock = obj.queueArray(k); % clock per coda servono a statistiche non per lista eventi
-                    queueToClock.clockUpdate(obj.externalClock); % aggiorna anche lunghezza media 
+                % aggiornamento clock di ogni coda
+                for k = 1:length(obj.queueArray)  
+                    queueToClock = obj.queueArray(k); 
+                    queueToClock.clockUpdate(obj.externalClock); % aggiornata internamente lunghezza media 
                 end
 
                 if isa(eventNode, 'generator')
-                    gen = eventNode; 
 
+                    gen = eventNode; 
                     queue = gen.queueDestination; 
                     server = queue.destinationServer;
 
-                    gen.customerExit(); % gestisce uscita da generatore e entrata coda 
+                    % generatore liberato e coda riempita 
+                    gen.customerExit();  
 
                     if obj.displayFlag == true
                         obj.displaySystemState
                     end
    
-                    [servicePossible, selectedCustomer] = server.checkAvailability(); % verifica se si può schedulare nuovo servizio 
+                    % controllo possibilità nuovo scheduling 
+                    [servicePossible, selectedCustomer] = server.checkAvailability(); 
              
-                    while servicePossible == 1   % servizio possibile
+                    % finchè il servizio è possibile schedula nuovi eventi 
+                    while servicePossible == 1   
+
                         server.scheduleNextEvents(selectedCustomer,obj.externalClock);
+
+                        % aggiorna lista eventi 
+                        obj.eventsList(server.id) = server.clock; 
 
                         if obj.displayFlag == true
                             obj.displaySystemState
                         end
  
-                        obj.eventsList(server.id) = server.clock; % aggiorna prossimo evento legato a server
-
-                        % verifica se coda può accogliere nuovo customer 
-                        updatedQueue = server.selectedQueue; % coda di provenienza del customer
+                        % coda di provenienza del customer 
+                        updatedQueue = server.selectedQueue; 
+                        % verifica se coda può accettare nuovi customer 
                         obj.propagateExit(updatedQueue);
+
+                        % controllo possibilità nuovo scheduling
                         [servicePossible, selectedCustomer] = server.checkAvailability();
                     end
 
+                    % schedula nuova generazione 
                     gen.scheduleNextArrival();
-                    obj.eventsList(gen.id) = gen.clock; % aggiorna prossimo evento legato a server % aggiorna prossimo evento legato a generatore
+
+                    % aggiorna lista eventi 
+                    obj.eventsList(gen.id) = gen.clock; 
 
                 else % isa(eventNode,'server')
+
                     server = eventNode; 
-                    server.addWaiting(obj.externalClock); % addWaiting deschedula l'evento precedente 
+
+                    % evento precedente deschedulato
+                    server.addWaiting(obj.externalClock);  
+
+                    % aggiorna lista eventi
+                    obj.eventsList(server.id) = server.clock;
 
                     if obj.displayFlag == true
                         obj.displaySystemState
                     end
-
-                    obj.eventsList(server.id) = server.clock; % aggiorna prossimo evento legato a server
-    
-                    if server.canExit() % verifica se si può rilasciare customer in coda
+                    
+                    % se c'è possibilità di rilascio nella coda successiva 
+                    if server.canExit() 
                         server.exitCustomer(obj.externalClock);
+
+                        % aggiorna lista eventi
                         obj.eventsList(server.id) = server.clock;
 
                         if obj.displayFlag == true
                             obj.displaySystemState
                         end
 
-
-                        while server.canExit() % verifica se si può svuotare ulteriormente la waiting list 
+                        % se c'è possibilità di rilascio nella coda successiva
+                        while server.canExit() 
                             server.exitCustomer(obj.externalClock);
                             obj.eventsList(server.id) = server.clock;
 
@@ -210,43 +231,51 @@ classdef simulator < handle
 
                         end 
 
+                        % coda successiva 
+                        queue = server.destinationQueue; 
 
-                        queue = server.destinationQueue; % coda successiva 
-
-                        % verifica su schedulazione evento server successivo  
+                        % verifica se server successivo accetta nuove schedulazioni 
                         if ~isequal(queue, obj.endQueue) % se non è la coda finale
                             nextServer = queue.destinationServer; 
                            
                             [nextServicePossible, nextSelectedCustomer] = nextServer.checkAvailability(); % server successivo può prendere nuovo customer
 
-                            if nextServicePossible == 1
+                            while nextServicePossible == 1
                                 nextServer.scheduleNextEvents(nextSelectedCustomer,obj.externalClock);
+
+                                % aggiorna lista eventi
+                                obj.eventsList(nextServer.id) = nextServer.clock;
 
                                 if obj.displayFlag == true
                                     obj.displaySystemState
                                 end
-                                
-                                obj.eventsList(nextServer.id) = nextServer.clock; % aggiorna prossimo evento legato a server
+
+                                [nextServicePossible, nextSelectedCustomer] = nextServer.checkAvailability();
                             end 
                         end 
                     end 
 
-                    [servicePossible, selectedCustomer] = server.checkAvailability();  % verifica disponibilità
+                    % verifica disponibilità per nuovo scheduling 
+                    [servicePossible, selectedCustomer] = server.checkAvailability();  
 
                     while servicePossible == true % servizio possibile
                         server.scheduleNextEvents(selectedCustomer,obj.externalClock);
+ 
+                        % aggiornamento lista eventi 
+                        obj.eventsList(server.id) = server.clock;
 
                         if obj.displayFlag == true
                             obj.displaySystemState
                         end
-
-                        obj.eventsList(server.id) = server.clock; % aggiorna prossimo evento legato a server
                         
-                        % verifica se coda può accogliere nuovo customer 
-                        updatedQueue = server.selectedQueue; % coda di provenienza del customer
-                        obj.propagateExit(updatedQueue); % propagazione 
+                        % coda di provenienza del customer
+                        updatedQueue = server.selectedQueue; 
+                        
+                        % verifica ricorsivamente la possibilità di nuovi ingressi
+                        obj.propagateExit(updatedQueue); 
 
-                        [servicePossible, selectedCustomer] = server.checkAvailability();  % verifica nuova disponibilità
+                        % verifica nuova disponibilità
+                        [servicePossible, selectedCustomer] = server.checkAvailability();  
                     end
 
                     obj.eventsList(server.id) = server.clock; 
@@ -254,80 +283,56 @@ classdef simulator < handle
             end
         end 
 
-        function propagateExit(obj, queue) % funzione ricorsiva
-            previousServers = queue.previousServers; % vettore server precedenti la coda 
+        function propagateExit(obj, queue) % funzione ricorsiva - per sblocco rede precedente
+
+            % vettore server precedenti la coda 
+            previousServers = queue.previousServers;  
 
             if isempty(queue.previousServers)
-                return;
+                return; % non c'è nulla da controllare 
             end
 
             for i = 1:length(previousServers) % nessuna priorità (solo ordine in grafo) 
+
                 server = previousServers(i); 
                 exitAllowed = server.canExit();
-                if exitAllowed == true
+
+                while exitAllowed == true
                     server.exitCustomer(obj.externalClock); % inserito customer in coda
+                    % aggiorna lista eventi 
                     obj.eventsList(server.id) = server.clock;
 
-                    % COMMENTO: se è possibile prendere in carico un nuovo
-                    % customer, si aggiornano ricorsivamente le code
-                    % precedenti 
-
+                    % verifica possibilità nuovo servizio 
                     [servicePossible, selectedCustomer] = server.checkAvailability(); 
 
                     while servicePossible == true % servizio possibile
 
-                        server.scheduleNextEvents(selectedCustomer,obj.externalClock); % customer tolto da coda precedente 
+                        % schedula nuovo evento 
+                        server.scheduleNextEvents(selectedCustomer,obj.externalClock);  
+
+                        % aggiorna lista eventi 
+                        obj.eventsList(server.id) = server.clock;
 
                         if obj.displayFlag == true
                             obj.displaySystemState
                         end
 
-                        obj.eventsList(server.id) = server.clock; % aggiorna prossimo evento legato a server 
 
-                        updatedQueue = server.selectedQueue; % coda di provenienza del customer
-                        obj.propagateExit(updatedQueue); % ricorsione chiamata quando serve
+                        % passo ricorsivo 
+                        updatedQueue = server.selectedQueue; 
+                        obj.propagateExit(updatedQueue); 
 
+                        % è possibile un nuovo scheduling 
                         [servicePossible, selectedCustomer] = server.checkAvailability();
                     end
+
+                    % è possibile un'altra uscita 
+                    exitAllowed = server.canExit();
                 end
             end
         end
 
-        function displayCustomerTrajectories(obj)
-            N = 10;
-        
-            q = obj.endQueue;
-            totalCustomers = length(q.customerList);
-            N = min(N, totalCustomers);
-        
-            % Scegli N clienti casuali
-            idxCustomers = randperm(totalCustomers, N);
-        
-            fprintf('\n========= TRAIETTORIE CUSTOMER CASUALI =========\n\n');
-        
-            for c = 1:N
-                customer = q.customerList(idxCustomers(c));
-                fprintf('Customer %d (ID %d):\n', c, idxCustomers(c));
-                fprintf('  %-20s %-10s %-10s\n', 'Nodo', 'Start Time', 'End Time'); % intestazione
-        
-                for j = 1:(length(customer.path)-1) 
-                    nodeIndex = customer.path(j);
-                    if nodeIndex <= length(obj.queueNodes) && nodeIndex > 0
-                        node = obj.queueNodes{nodeIndex};
-                        nodeLabel = sprintf('%s(%d)', class(node), node.id);
-                    else
-                        nodeLabel = sprintf('UnknownNode(%d)', nodeIndex);
-                    end
-                    st = customer.startTime(j);
-                    et = customer.endTime(j);
-        
-                    fprintf('  %-20s %10.3f %10.3f\n', nodeLabel, st, et);
-                end
-                fprintf('-----------------------------\n');
-            end
-        end
-
-
+        % FUNZIONI AUSILIARIE 
         function statisticsArrayWaiting = waitingTimeStatistic(obj)
             % customers: array di customer con campi arrivalTime, startTime e endTime
             customerList     = obj.endQueue.customerList;
@@ -399,9 +404,7 @@ classdef simulator < handle
             fprintf('======================================\n\n');
         end
 
-
-        
-         function displaySystemState(obj)
+        function displaySystemState(obj)
             fprintf('\n========= SYSTEM STATE =========\n\n');
             
             % stato dei server
@@ -428,7 +431,7 @@ classdef simulator < handle
             fprintf('\n===============================\n');
          end
 
-         function statisticsArray = collectStatistics(obj)
+        function statisticsArray = collectStatistics(obj)
             statisticsArray = cell(length(obj.queueNodes), 1);
         
             fprintf('\n========= STATISTICHE FINALI =========\n');
@@ -488,9 +491,7 @@ classdef simulator < handle
          end
 
          
-
-
-         function clearSimulator(obj)
+        function clearSimulator(obj)
 
             for i = 1:length(obj.queueNodes)
                 node = obj.queueNodes{i};
@@ -507,18 +508,14 @@ classdef simulator < handle
             end
         
             % pulitura coda finale 
-            if ~isempty(obj.endQueue) && ismethod(obj.endQueue, 'clearQueue')
-                obj.endQueue.clearQueue();
-            end
-        
+            obj.endQueue.clearQueue();
+            
             % azzeramento clock e lista eventi 
             obj.externalClock = 0;
             obj.eventsList(:) = inf;
         
             fprintf('Tutte le statistiche sono state azzerate.\n');
          end
-
-
     end
 end
 

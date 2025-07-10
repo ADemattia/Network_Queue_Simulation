@@ -1,15 +1,16 @@
 classdef balkingQueue < queue
-    %UNTITLED Summary of this class goes here
-    %   Detailed explanation goes here
+    % coda balking con una certa quantità di posti (hardCapacity) occupati
+    % deterministicamente e una certa quantità di posti (softCapacity) occupati
+    % aletoriamente
     
     properties
-        hardCapacity  % capacità hard 
+        hardCapacity  
         
-        softCapacity  % capacità soft 
+        softCapacity  
 
-        totalCapacity  % capacità totale 
+        totalCapacity  
 
-        softCapacityDistribution % funzione distribuzione per accettazione posto soft 
+        softCapacityDistribution % funzione randomica per accettazione posto soft 
     end
     
     methods
@@ -26,22 +27,31 @@ classdef balkingQueue < queue
         end
 
         function arrivalManagment(obj, customer)
+
+            % aggiornamento path ed eventi customer 
             customer.path(end + 1) = obj.id;
-            customer.startTime(obj.id) = obj.clock; % tempo entrata in coda 
+            customer.startTime(obj.id) = obj.clock; 
 
             % politica di balking
-            if obj.lengthQueue < obj.hardCapacity % posti hard
+            if obj.lengthQueue < obj.hardCapacity 
+                % inserimento in coda 
                 obj.customerList(end + 1) = customer;
-                obj.lengthQueue = obj.lengthQueue + 1; 
-                obj.count = obj.count + 1; % aggiornato conteggio 
 
-            elseif obj.lengthQueue >= obj.hardCapacity && obj.lengthQueue < obj.totalCapacity % posti soft 
-                    decision = obj.softCapacityDistribution(); % campionamento decisione 
+                % aggiornamento conteggi 
+                obj.lengthQueue = obj.lengthQueue + 1; 
+                obj.count = obj.count + 1;  
+
+            elseif obj.lengthQueue >= obj.hardCapacity && obj.lengthQueue < obj.totalCapacity % gestione posti soft
+                    % campionamento decisione 
+                    decision = obj.softCapacityDistribution(); 
 
                     if decision == 1
+                        % inserimento in coda
                         obj.customerList(end + 1) = customer;
+
+                        % aggiornamento conteggi 
                         obj.lengthQueue = obj.lengthQueue + 1; 
-                        obj.count = obj.count + 1; % aggiornato conteggio 
+                        obj.count = obj.count + 1; 
 
                     else % decision == 0 
                         obj.lostCustomer = obj.lostCustomer + 1; 
@@ -52,8 +62,9 @@ classdef balkingQueue < queue
             end 
         end
 
-        function isAvailable = isQueueAvailable(obj)
-            isAvailable = obj.waitingFlag; % sempre disponibile 
+        function isAvailable = isQueueAvailable(obj) 
+            % sempre disponibile
+            isAvailable = obj.waitingFlag;  
         end 
         
         % Pulitore statistiche 

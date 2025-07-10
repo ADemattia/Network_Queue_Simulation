@@ -23,7 +23,8 @@ classdef priorityServer < server
         end
         
 
-        % è possibile servire un nuovo customer? 
+        % istanziazione funzioni astratte 
+
         function [servicePossible, selectedCustomer] = checkAvailability(obj)
             % assegnazione di default 
             servicePossible = 0;
@@ -31,7 +32,7 @@ classdef priorityServer < server
 
             % se almeno un servitore è disponibile
             if obj.notFullyOccupied == 1
-                for i = 1 : obj.numPreviousQueues  % ordinamento grafo, nessuna priorità
+                for i = 1 : obj.numPreviousQueues  % ordinamento grafo, nessuna prioritarità
                     currentQueue = obj.previousQueues(i);
                     if currentQueue.lengthQueue > 0
                         servicePossible = 1; 
@@ -43,7 +44,6 @@ classdef priorityServer < server
             end 
         end
 
-        % schedulazione nuovo evento
         function scheduleNextEvents(obj, customer, externalClock)
             
             % aggiornamento path ed eventi customer 
@@ -80,7 +80,7 @@ classdef priorityServer < server
                 serviceTime = 0;  % customer immediatamente cacciato 
             end
 
-            % aggiornamento tempo 
+ 
             obj.clockServer(serverId) = externalClock + serviceTime;
          
  
@@ -96,55 +96,43 @@ classdef priorityServer < server
             [obj.clock, obj.eventServer] = min(obj.clockServer); % riassegnazione
         end
 
-        % sposta un customer in coda waiting e aggiorna server in modalità waiting
         function addWaiting(obj, externalClock)
+            customer = obj.customerToServer(obj.eventServer); % customer a fine servizio
+            obj.exitWaitingList(end+1) = customer; % customer aggiunto a lista di uscita
 
-            % ricerca customer e spostamento in waiting list 
-            customer = obj.customerToServer(obj.eventServer); 
-            obj.exitWaitingList(end+1) = customer; 
-
-            % gestione stato server
             obj.clockServer(obj.eventServer) = inf;     % tempo server riportato a inf
-            obj.updateServerTime(obj.eventServer,externalClock); % aggiorna statistiche server 
+            obj.updateServerTime(obj.eventServer,externalClock); % aggiorna statistiche di tempo
             obj.serverState(obj.eventServer) = serverState.Waiting;       % server in wait
 
-            % aggiorna clock e server evento 
-            obj.eventServer = NaN;  % assengazione nulla 
-            [obj.clock, obj.eventServer] = min(obj.clockServer); % riassegnazione 
+            % schedula evento successivo 
+            obj.eventServer = NaN;  % l'assegnazione server prossimo evento ritorna nulla 
+            [obj.clock, obj.eventServer] = min(obj.clockServer); % riassegnazione clock
         end 
 
         function exitCustomer(obj, externalClock)
-            % aggiornamento statistiche e variabili 
-            obj.count = obj.count + 1; 
-            exitCustomer = obj.exitWaitingList(1); % nessuna priorità
-            obj.exitWaitingList(1) = [];  
+            obj.count = obj.count + 1; % aggiornamento customer serviti
+            exitCustomer = obj.exitWaitingList(1); % primo customer in uscita
+            obj.exitWaitingList(1) = []; % eliminazione da lista waiting 
 
-            % aggiornamento eventi del customer 
-            exitCustomer.endTime(obj.id) = externalClock; 
+            exitCustomer.endTime(obj.id) = externalClock; % memorizza tempo uscita 
 
-            % server che sta servendo customer 
             [~, serverId] = obj.getServerFromCustomer(exitCustomer);
 
-            % gestione arrivo in coda destionazione 
             arrivalQueue = obj.destinationQueue; 
-            arrivalQueue.arrivalManagment(exitCustomer);
+            arrivalQueue.arrivalManagment(exitCustomer); 
 
-
-            % gestione liberazione server     
             obj.customerToServer(serverId) = customer();  % impostato customer di default
             obj.updateServerTime(serverId,externalClock);
             obj.serverState(serverId) = serverState.Free;  % server ritorna libero
 
-            % sono ancora disponibili server liberi?
-            if any(obj.serverState == serverState.Free) 
-                obj.notFullyOccupied = true;  
-            else % tutti i server non liberi 
-                obj.notFullyOccupied = false;  
+            if any(obj.serverState == serverState.Free) % aggiornamento stato disponibilità
+                obj.notFullyOccupied = true;  % se almeno uno è libero, il server è disponibile
+            else
+                obj.notFullyOccupied = false;  % tutti i server non liberi
             end
 
-            % aggiorna clock e server evento 
-            obj.eventServer = NaN;  % assengazione nulla 
-            [obj.clock, obj.eventServer] = min(obj.clockServer); % riassegnazione
+            obj.eventServer = NaN;  % l'assegnazione server prossimo evento ritorna nulla 
+            [obj.clock, obj.eventServer] = min(obj.clockServer); % riassegnazione clock
         end
 
         % Pulitore statistiche 

@@ -1,15 +1,16 @@
 classdef gasServer < server
-    %GASSERVER Summary of this class goes here
-    %   Detailed explanation goes here
-    
-    properties
-        serverSeries % cell array rappresentante vincoli di sequenzialità - assumiamo struttura parallela
-        utilitisServerSeries % variabile ausiliaria utile nelle funzioni 
-        numType % numero tipi customer 
-        serverPerType % cell array con server eleggibili per tipo
-        selectedServerId % variabile ausiliaria 
+    % gasServer è il server che simula dei server posti in file, dunque il
+    % customer non potrà scegliere qualsiasi server ma dovrà rispettare
+    % vincoli fisici 
 
-        exitStuckList % lista customer a servizio finito bloccati nel traffico 
+    properties
+        serverSeries % cell array con struttura vincoli in forma di array (e.g [1,2] la macchina 2 viene dopo la macchina 1) 
+        utilitisServerSeries % variabile ausiliaria per vincoli  
+        numType 
+        serverPerType % cell array con server adatti per tipo di customer 
+        selectedServerId % variabile ausiliaria  
+
+        exitStuckList % lista customer bloccati nel traffico  
     end
 
     methods
@@ -23,64 +24,68 @@ classdef gasServer < server
             obj.serverPerType = serverPerType;
             obj.selectedServerId = []; 
 
-
-            obj.utilitisServerSeries = cell(1, obj.numServer); % cell array contenente per ogni server la serie di cui fa parte 
+            % cell array contenente per ogni server la struttura della serie di cui fa parte
+            obj.utilitisServerSeries = cell(1, obj.numServer);  
             for j = 1:length(obj.serverSeries)
                 currentSeries = obj.serverSeries{j}; 
 
-                for l = 1:length(currentSeries) % salva la serie per ogni server 
+                % salva la serie per ogni server
+                for l = 1:length(currentSeries)  
                     serverId = currentSeries(l);
                     obj.utilitisServerSeries{serverId} = currentSeries; 
                 end
             end
         end
 
-        function canBeServed = customerCheckAvailability(obj, selectedCustomer, currentQueue) % funzione di controllo livello customer 
-
+        % selectedCustomer può essere servito? 
+        function canBeServed = customerCheckAvailability(obj, selectedCustomer, currentQueue) 
+            % inizializzazione 
             canBeServed = false; 
+            obj.selectedServerId = []; % server selezionato 
             
+            % gestione tipo customer 
             customerType = selectedCustomer.type; % tipo customer 
             eligibleServers = obj.serverPerType{customerType}; % server che soddisfano il tipo 
-
-            obj.selectedServerId = [];  % valore di default del server assegnato 
             
             % ricerca server da assegnare rispettando vincoli 
             for j = 1:length(obj.serverSeries)
-                selectedSeries = obj.serverSeries{j}; % array ordinato di indici
+                selectedSeries = obj.serverSeries{j}; % estrazione di una serie di server 
 
-                firstBusyIndex = []; % posizione vettore del primo server busy (non utilizzabile) 
+                firstBusyIndex = []; % posizione vettore del primo server busy (non utilizzabile) nella serie  
 
-                % scorrimento per cercare server disponibili in una serie
+                % scorrimento per definire firstBusyIndex
+                % solo server precedenti possono essere utilizzati per precedenza
                 for l = 1:length(selectedSeries)
                     currentServerId = selectedSeries(l);
                     if (obj.serverState(currentServerId) == serverState.Working || obj.serverState(currentServerId) == serverState.Waiting || obj.serverState(currentServerId) == serverState.StuckInTraffic)
-                        firstBusyIndex = l;  % solo server precedenti possono essere utilizzati per precedenza
+                        firstBusyIndex = l;  
                         break;
                     end
                 end
 
-                 
-                availableServerId = []; % vettore id server disponibili 
+                % vettore di id dei server disponibili 
+                availableServerId = [];  
 
-                if ~isempty(firstBusyIndex) && firstBusyIndex > 1
-                    availableServerId = selectedSeries(1:firstBusyIndex - 1);
+                if ~isempty(firstBusyIndex) && firstBusyIndex > 1 
+                    availableServerId = selectedSeries(1:firstBusyIndex - 1); % presi server precedenti 
                 elseif isempty(firstBusyIndex) % nessun server è occuppato  
                     availableServerId = selectedSeries;  % presi tutti 
                 elseif firstBusyIndex == 1
-                    availableServerId = [];
+                    availableServerId = []; % nessun server disponibile nella serie 
                 end
 
-                if ~isempty(availableServerId)
-                    for h = length(availableServerId):-1:1  % scorre da ultimo server disponibile a primo
+                if ~isempty(availableServerId) % se è disponibile almeno un server 
+                    for h = length(availableServerId):-1:1  % scorre da ultimo server disponibile a primo - per vincoli 
                         serverId = availableServerId(h);
-                        if ismember(serverId, eligibleServers) % il server è adatto al tipo di customer  
-                            obj.selectedServerId = serverId;  % trovato l'id del server più lontano adatto
+                        % se il server è adatto al tipo di customer viene assegnato l'id
+                        if ismember(serverId, eligibleServers)   
+                            obj.selectedServerId = serverId;  
                             break; % usciamo da blocco ricerca 
                         end
                     end
                 end
 
-            % se ha trovato un server si può servire 
+                % se si è trovato qualcosa  
                 if ~isempty(obj.selectedServerId)
                     canBeServed = true;
                     obj.selectedQueue = currentQueue;  % salva la coda selezionata
@@ -89,29 +94,30 @@ classdef gasServer < server
             end
         end 
 
+        % è possibile servire un nuovo customer? 
         function [servicePossible, selectedCustomer] = checkAvailability(obj)
+
             % assegnazione di default 
             servicePossible = 0;
             selectedCustomer = customer(); 
 
             % se almeno un servitore è disponibile
             if obj.notFullyOccupied == true
+                for i = 1 : obj.numPreviousQueues  % ordinamento grafo, nessuna priorità 
 
-                for i = 1 : obj.numPreviousQueues  % ordinamento grafo, nessuna prioritarità
                     currentQueue = obj.previousQueues(i);
-
-                    if currentQueue.lengthQueue > 0
-              
+                    if currentQueue.lengthQueue > 0       
                         selectedCustomer = currentQueue.customerList(1); % preso primo customer coda (FIFO) 
-                        canBeServed = obj.customerCheckAvailability(selectedCustomer, currentQueue); % assegna eventualmente anche il server di lavorazione  
+                        canBeServed = obj.customerCheckAvailability(selectedCustomer, currentQueue); % controllo locale   
                         if canBeServed == true 
                             servicePossible = true;
                             return; % esce dalla funzione  
+
                         elseif currentQueue.overtakingFlag == true % è possibile fare sorpassi in coda 
     
-                            for c = 2:length(currentQueue.customerList)
+                            for c = 2:length(currentQueue.customerList) % guarda customer successivi 
                                 selectedCustomer = currentQueue.customerList(c); % preso c-esimo customer 
-                                canBeServed = obj.customerCheckAvailability(selectedCustomer, currentQueue); 
+                                canBeServed = obj.customerCheckAvailability(selectedCustomer, currentQueue); % controllo locale 
                                 if canBeServed == true 
                                     servicePossible = true;
                                     return; 
@@ -123,97 +129,113 @@ classdef gasServer < server
             end
         end
 
+        % schedulazione nuovo evento
         function scheduleNextEvents(obj, customer, externalClock)
 
+            % aggiornamento path ed eventi customer
             customer.path(end + 1) = obj.id;
             customer.startTime(obj.id) = externalClock; % memorizza tempo entrata in server
 
-            % eliminazione customer da coda 
+            % gestione uscita customer da coda 
             queueToUpdate = obj.selectedQueue; 
             queueToUpdate.exitMangement(customer); % gestione uscita customer da coda precedente 
 
-            
-            serverId = obj.selectedServerId; % trovato durante checkAvailability
-            obj.updateServerTime(serverId,externalClock);
-            obj.serverState(serverId) = serverState.Working; % mette in stato occupato il server
-            obj.customerToServer(serverId) = customer; % che customer serve un server  
+            % gestione assegnazione server
+            serverId = obj.selectedServerId; 
+            obj.updateServerTime(serverId, externalClock); %  aggiorna statistiche server
+            obj.serverState(serverId) = serverState.Working; % mette il server in work 
+            obj.customerToServer(serverId) = customer; % assegna customer a server  
 
+            % pulisce variabile 
             obj.selectedServerId = []; 
 
+            % tempo servizio
             serviceTime = obj.serverDistribution(serverId);  % tempo di servizio 
             obj.clockServer(serverId) = externalClock + serviceTime;
-
             
-            [obj.clock, obj.eventServer] = min(obj.clockServer); % aggiornamento nuovo evento e indice nuovo evento
-
-            
-            if any(obj.serverState == serverState.Free) % aggiornamento stato disponibilità
-                obj.notFullyOccupied = true;  % se almeno uno è libero, il server è disponibile
-            else
-                obj.notFullyOccupied = false;  % tutti i server non liberi
+            % sono ancora disponibili server liberi?
+            if any(obj.serverState == serverState.Free) 
+                obj.notFullyOccupied = true;  
+            else % tutti i server non liberi 
+                obj.notFullyOccupied = false;  
             end
+
+            % aggiorna clock e server evento 
+            obj.eventServer = NaN;  % assengazione nulla 
+            [obj.clock, obj.eventServer] = min(obj.clockServer); % riassegnazione
         end
 
+        % sposta un customer in coda waiting/stucl e aggiorna server
         function addWaiting(obj, externalClock) % mette il server in modalità waiting e aggiorna prossimo evento
             
-            customer = obj.customerToServer(obj.eventServer); % customer a fine servizio
-
+            % ricerca customer e informazione su serie in cui si trova 
+            customer = obj.customerToServer(obj.eventServer);
             series = obj.utilitisServerSeries{obj.eventServer}; % serie in cui si trova il server    
             positionInSeries = find(series == obj.eventServer); % posizione server in serie 
             followingServers = series(positionInSeries+1:end); % id server successivi (se è vuoto la condizione dopo viene valutata come true) 
             
-            % verifica se server successii sono liberi 
-            if all(obj.serverState(followingServers) == serverState.Free)
-                % tutti liberi, il customer può uscire senza problemi
-                obj.exitWaitingList(end+1) = customer; % customer aggiunto a lista waiting in uscita 
+            % verifica se server successivi sono liberi  
+            if all(obj.serverState(followingServers) == serverState.Free) 
+                % tutti liberi, il customer può uscire senza problemi 
+                % gestione stato server e inserimento in waiting list 
+                obj.exitWaitingList(end+1) = customer;
                 obj.clockServer(obj.eventServer) = inf;
-                obj.updateServerTime(obj.eventServer,externalClock);
-                obj.serverState(obj.eventServer) = serverState.Waiting; % server associato in stato Waiting 
-            else % almeno un server successivo è occupato (working, waiting, instuck) 
+                obj.updateServerTime(obj.eventServer,externalClock); % aggiornamento statistiche server 
+                obj.serverState(obj.eventServer) = serverState.Waiting; % server in stato waiting 
+            
+            else % almeno un server successivo è occupato (working, waiting, instuck)
+
+                % gestione stato server e inserimento in stuck list 
                 obj.exitStuckList(end+1) = customer; % customer aggiunto a lista dei bloccati nel traffico
                 obj.clockServer(obj.eventServer) = inf;
-                obj.updateServerTime(obj.eventServer,externalClock);
-                obj.serverState(obj.eventServer) = serverState.StuckInTraffic; % server associato in stato StuckInTraffic
+                obj.updateServerTime(obj.eventServer,externalClock); % aggiornamento statistiche server
+                obj.serverState(obj.eventServer) = serverState.StuckInTraffic; % server in stato stuck
             end
             
-            % schedula evento successivo 
-            obj.eventServer = NaN;  % l'assegnazione server prossimo evento ritorna nulla 
-            [obj.clock, obj.eventServer] = min(obj.clockServer); % riassegnazione clock
+            % sono ancora disponibili server liberi?
+            if any(obj.serverState == serverState.Free) 
+                obj.notFullyOccupied = true;  
+            else % tutti i server non liberi 
+                obj.notFullyOccupied = false;  
+            end
+
+            % aggiorna clock e server evento 
+            obj.eventServer = NaN;  % assengazione nulla 
+            [obj.clock, obj.eventServer] = min(obj.clockServer); % riassegnazione 
         end 
 
+        % fa uscire customer e aggiorna server in modalità free e gestione stuck 
         function exitCustomer(obj, externalClock)
+            % aggiornamento statistiche
+            obj.count = obj.count + 1; 
 
-            obj.count = obj.count + 1; % aggiornamento customer serviti
-            randomIndex = randi(length(obj.exitWaitingList));  % scegliamo customer in uscita casualmente 
+            % scelto primo customer da fare uscire (randomicamente) 
+            randomIndex = randi(length(obj.exitWaitingList));  
             exitCustomer = obj.exitWaitingList(randomIndex);
-            obj.exitWaitingList(randomIndex) = []; % rimuoviamo customer da waiting list
+            obj.exitWaitingList(randomIndex) = []; % customer rimosso da waiting list 
 
-            exitCustomer.endTime(obj.id) = externalClock; % memorizza tempo uscita da coda 
+            % aggiornamento eventi del customer 
+            exitCustomer.endTime(obj.id) = externalClock;  
 
+            % gestione arrivo in coda destionazione
             arrivalQueue = obj.destinationQueue; % gestione arrivi in prossima coda 
             arrivalQueue.arrivalManagment(exitCustomer); % accoglienza nuovo customer
 
+            % server che sta servendo il customer
             [~, serverId] = obj.getServerFromCustomer(exitCustomer);
 
+            % gestione liberazione server
             obj.customerToServer(serverId) = customer();  % impostato customer di default  
-            obj.updateServerTime(serverId,externalClock);
+            obj.updateServerTime(serverId, externalClock); % aggiornamento statistiche server 
             obj.serverState(serverId) = serverState.Free;  % server ritorna libero
 
-
+            
             i = length(obj.exitStuckList);
-
             while i >= 1 
                 stuckCustomer = obj.exitStuckList(i);
             
-                [found, stuckServerId] = obj.getServerFromCustomer(stuckCustomer); % server associato al customer
+                [~, stuckServerId] = obj.getServerFromCustomer(stuckCustomer); % server associato al customer
 
-                if found == false
-                    disp("There is something Wrong!!")
-                    i = i - 1;
-                    continue;  % Salta all'iterazione successiva
-                end
-
-            
                 stuckSeries = obj.utilitisServerSeries{stuckServerId}; % serie associata al server        
                 idInSeries = find(stuckSeries == stuckServerId); % posizione server in serie  
                 followingServers = stuckSeries(idInSeries+1:end); % server successivi (se è vuoto la condizione dopo viene valutata come true) 
@@ -229,18 +251,19 @@ classdef gasServer < server
                 else % non ancora libero
                    
                 end
-
                 i = i - 1;
             end
 
-            if any(obj.serverState == serverState.Free) % aggiornamento stato disponibilità
-                obj.notFullyOccupied = true;  % se almeno uno è libero, il server è disponibile
-            else
-                obj.notFullyOccupied = false;  % tutti i server non liberi
+            % sono ancora disponibili server liberi?
+            if any(obj.serverState == serverState.Free) 
+                obj.notFullyOccupied = true;  
+            else % tutti i server non liberi 
+                obj.notFullyOccupied = false;  
             end
 
-            obj.eventServer = NaN;  % l'assegnazione server prossimo evento ritorna nulla 
-            [obj.clock, obj.eventServer] = min(obj.clockServer); % riassegnazione clock
+            % aggiorna clock e server evento 
+            obj.eventServer = NaN;  % assengazione nulla 
+            [obj.clock, obj.eventServer] = min(obj.clockServer); % riassegnazione
         end
 
         % Pulitore statistiche 

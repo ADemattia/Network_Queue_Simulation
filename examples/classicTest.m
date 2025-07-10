@@ -1,3 +1,4 @@
+%% TEST Classico con un generatore, una coda a capacità infinita e un server 
 clear all
 clc
 
@@ -32,10 +33,10 @@ revenueFunction = @(n) 0;
 
 server3 = classicServer(numServer,serverDistribution, revenueFunction);  % 3
 
-
+% vettore nodi, grafo struttura e orizzonte 
 queueNodes = {gen1, queue2, server3}; 
 queueGraph = [0, 1, 0; 0, 0, 1; 0, 0, 0]; 
-horizon = 100;  % per matchare con codice visto a lezione 
+horizon = 100;  
 displayFlag = false;
 
 simulator = simulator(horizon,queueNodes,queueGraph, displayFlag); 
@@ -45,7 +46,6 @@ simulator.excuteSimulation();
 statisticsArray = simulator.collectStatistics(); 
 statisticsArrayWaiting = simulator.waitingTimeStatistic(); 
 
-%simulator.displayCustomerTrajectories(); 
 %simulator.clearSimulator(); 
 %statisticsArray = simulator.collectStatistics();
 

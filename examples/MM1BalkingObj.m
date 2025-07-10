@@ -1,3 +1,4 @@
+%% Coda MM1 con balking nella prima coda (come esempio lezione) 
 clear all
 clc
 
@@ -35,10 +36,13 @@ revenueFunction = @(n) 0;
 server3 = classicServer(numServer,serverDistribution, revenueFunction);  % 3 
 
 % SIMULAZIONE 
+
+% vettore nodi, grafo struttura e orizzonte 
 queueNodes = {gen1, queue2, server3}; 
 queueGraph = [0, 1, 0; 0, 0, 1; 0, 0, 0]; 
 horizon = 10150;  % per matchare con codice visto a lezione 
 displayFlag = false; 
+
 
 simulator = simulator(horizon,queueNodes,queueGraph, displayFlag); 
 simulator.networkSetUp(); 
@@ -47,7 +51,7 @@ simulator.excuteSimulation();
 statisticsArray = simulator.collectStatistics(); 
 statisticsArrayWaiting = simulator.waitingTimeStatistic(); 
 
-%simulator.displayCustomerTrajectories(); 
+
 %simulator.clearSimulator(); 
 %statisticsArray = simulator.collectStatistics();
 

@@ -6,8 +6,8 @@ classdef (Abstract) server < handle
         id
         clock 
          
-        destinationQueue % coda arrivo (unica) 
-        previousQueues % code precedenti (anche più di una) 
+        destinationQueue  % coda arrivo (unica) 
+        previousQueues  % code precedenti (anche più di una) 
         numPreviousQueues % numero code precedenti 
         selectedQueue % coda selezionata per servizio 
         
@@ -29,13 +29,13 @@ classdef (Abstract) server < handle
 
         count % conteggio customer 
 
-        % vettori per calcolo tempo in uno stato del server
+        % vettori per calcolo tempo in uno stato dei server
         timeInFree
         timeInWorking
         timeInWaiting
         timeInStuck
 
-        clockPreviousState % variabile ausiliaria 
+        clockPreviousState  % variabile ausiliaria 
     end
     
     methods
@@ -95,7 +95,7 @@ classdef (Abstract) server < handle
 
         % COMMENTO : si potrebbe raffinare sul tipo di customer
         function exitAllowed = canExit(obj) % indica se un lavoro finito può uscire        
-            if isempty(obj.exitWaitingList)
+            if isempty(obj.exitWaitingList) 
                 exitAllowed = false;
                 return;
             end
@@ -106,14 +106,8 @@ classdef (Abstract) server < handle
         end 
     
         function updateServerTime(obj, serverId, externalClock)
-        % updateServerTime Aggiorna i tempi di permanenza per ciascuno stato del server
-        %   obj = updateServerTime(obj, serverId, externalClock) aggiorna il vettore
-        %   timeInFree, timeInWorking, timeInWaiting o timeInStuck per il server
-        %   specificato da serverId, aggiungendo la differenza tra externalClock e
-        %   il tempo salvato in clockPreviousState(serverId). Infine, aggiorna
-        %   clockPreviousState(serverId) a externalClock.
-        
-            % Calcola il tempo trascorso dall'ultimo aggiornamento
+
+            % calcola il tempo trascorso dall'ultimo aggiornamento
             deltaT = externalClock - obj.clockPreviousState(serverId);
         
             % Identifica lo stato corrente del server
@@ -128,7 +122,7 @@ classdef (Abstract) server < handle
                     obj.timeInStuck(serverId) = obj.timeInStuck(serverId) + deltaT;
             end
         
-            % Aggiorna il tempo precedente di stato
+            % aggiorna il tempo precedente di stato
             obj.clockPreviousState(serverId) = externalClock;
         end
     end 

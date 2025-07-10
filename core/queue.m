@@ -10,14 +10,14 @@ classdef (Abstract) queue < handle
         previousGenerators % generatori precedenti (anche più di uno)
         destinationServer % server destinazione (unico)
 
-        customerList % lista customer in coda 
+        customerList  
         lengthQueue  % lunghezza coda corrente 
         
-        overtakingFlag % coda che permette i sorpassi di customer
-        waitingFlag % flag: i customer sono persi o aspettano (per buffer) 
+        overtakingFlag % la coda che permette i sorpassi di customer nel servizio?
+        waitingFlag % i customer dal server sono persi o aspettano liberazione posti? 
               
         count  % numero di customer che sono stati in coda (non conta i persi) 
-        averageLength % lunghezza media 
+        averageLength  
         lostCustomer  % numero customer persi
 
  
@@ -56,10 +56,14 @@ classdef (Abstract) queue < handle
 
         % funzione gestore uscita
 
-        function exitMangement(obj, customer) 
+        function exitMangement(obj, customer)
+            % ricerca customer 
               for i = length(obj.customerList):-1:1
                   if obj.customerList(i) == customer
-                      customer.endTime(obj.id) = obj.clock;  % tempo uscita da coda 
+
+                      % aggiornamento eventi customer 
+                      customer.endTime(obj.id) = obj.clock; 
+
                       obj.customerList(i) = []; 
                       obj.lengthQueue = obj.lengthQueue - 1;
                       break;
@@ -69,10 +73,15 @@ classdef (Abstract) queue < handle
 
         function clockUpdate(obj, externalClock) % aggiorna clock e lunghezza media 
 
-            clockDiff = externalClock - obj.clock; 
-            totalLength = obj.averageLength * obj.clock + clockDiff * obj.lengthQueue; 
+            % lunghezza coda attuale è tenuta da precedente evento salvato
+            % in obj.clock 
 
-            obj.averageLength = totalLength/externalClock; 
+            % aggiornamento lunghezza media coda
+            clockDiff = externalClock - obj.clock;   
+            totalLength = obj.averageLength * obj.clock + clockDiff * obj.lengthQueue;
+            obj.averageLength = totalLength/externalClock;
+
+            % aggiorna clock 
             obj.clock = externalClock; 
 
         end 
@@ -81,7 +90,7 @@ classdef (Abstract) queue < handle
     end
     methods (Abstract)
         arrivalManagment(obj,customer)
-        isAvailable = isQueueAvailable(obj) % funzione per comunicare al server se può o meno rilasciare il customer
+        isAvailable = isQueueAvailable(obj) % è possibile rilasciare customer in coda da server? 
         clearQueue(obj)
     end
 end
