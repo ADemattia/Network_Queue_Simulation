@@ -55,12 +55,12 @@ Script MATLAB che mostrano come configurare e avviare simulazioni per vari scena
 /project-root
 │
 ├─ core/
+│   ├─ generator.m
 │   ├─ simulator.m
 │   ├─ queue.m
 │   └─ server.m
 │
 ├─ implementations/
-│   ├─ generator.m
 │   ├─ queue/
 │   │   ├─ classicQueue.m
 │   │   └─ balkingQueue.m
@@ -70,15 +70,16 @@ Script MATLAB che mostrano come configurare e avviare simulazioni per vari scena
 │       └─ gasServer.m
 │
 ├─ utils/
-│   └─ *.m
-│
+│   ├─ customerIdGenerator.m   % genera ID unici per i clienti
+│   ├─ nodeIdGenerator.m       % genera ID unici per i nodi (generatori, code, server)
+│   └─ serverState.m           % definisce stati possibili di un server
 └─ examples/
-    ├─ example_basic.m
-    ├─ example_mm1_balking.m
-    ├─ example_classicTest.m
-    ├─ example_priority.m
-    ├─ example_gasStation.m
-    └─ example_trajectories.m
+    ├─ bufferSituation.m
+    ├─ classicTest.m 
+    ├─ gasStation.m
+    ├─ MM1BalkingObj.m 
+    └─ revenueManagment.m
+    
 ```
 
 ---
@@ -133,12 +134,11 @@ Procedura analoga per `implementations/server`:
 ---
 
 ## Esperimenti e Script Esemplificativi
-- **Basic**: conferma del flusso semplice e corretto inter-arrivi/servizio.
-- **MM1 Balking**: impatto di hard/soft capacity sui tempi di attesa.
-- **Multiserver**: scaling orizzontale con `classicServer`.
-- **Priority**: gestione differenziata di tipi di clienti.
-- **Gas Station**: vincoli fisici in serie e gestione del traffico.
-- **Trajectories**: tracciamento individuale di percorsi cliente per debug e analisi.
+- **Rete Base M/M/c (`example_basic.m`)**: flusso gen→coda→server classico con `classicQueue` infinita e `classicServer` a c linee parallele.
+- **M/M/1 con Balking (`example_mm1_balking.m`)**: coda `balkingQueue` con hardCapacity e softCapacity; studio di impatto su attese e persi.
+- **Buffering Server (`example_buffer.m`)**: test di `waitingFlag=true` per code `classicQueue` di capacità limitata, analisi di come i server attendono la liberazione della coda.
+- **Server Prioritario con Revenue Management (`example_priority.m`)**: `priorityServer` con quote per tipo e funzione di revenue, combinato con `balkingQueue`, valutazione di ricavi e attese.
+- **Gas Station (`example_gasStation.m`)**: `gasServer` con vincoli fisici in serie (`serverSeries = {[1,2],[3,4]}`) e `classicQueue` verso cassa, analisi traffico bloccato, simulazione distributore benzina.
 
 ---
 
