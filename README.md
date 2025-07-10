@@ -115,7 +115,6 @@ Metodi principali:
 
 
 ### implementations/
-- **`generator.m`**: genera arrivi secondo una distribuzione specificata e assegna tipi di cliente.
 
 #### queue/
 - **`classicQueue.m`**: coda FIFO con capacity limit e politica accept/reject.
