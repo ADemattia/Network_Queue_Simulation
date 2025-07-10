@@ -106,8 +106,14 @@ classdef (Abstract) server < handle
         end 
     
         function updateServerTime(obj, serverId, externalClock)
-
-            % calcola il tempo trascorso dall'ultimo aggiornamento
+        % updateServerTime Aggiorna i tempi di permanenza per ciascuno stato del server
+        %   obj = updateServerTime(obj, serverId, externalClock) aggiorna il vettore
+        %   timeInFree, timeInWorking, timeInWaiting o timeInStuck per il server
+        %   specificato da serverId, aggiungendo la differenza tra externalClock e
+        %   il tempo salvato in clockPreviousState(serverId). Infine, aggiorna
+        %   clockPreviousState(serverId) a externalClock.
+        
+            % Calcola il tempo trascorso dall'ultimo aggiornamento
             deltaT = externalClock - obj.clockPreviousState(serverId);
         
             % Identifica lo stato corrente del server
@@ -122,7 +128,7 @@ classdef (Abstract) server < handle
                     obj.timeInStuck(serverId) = obj.timeInStuck(serverId) + deltaT;
             end
         
-            % aggiorna il tempo precedente di stato
+            % Aggiorna il tempo precedente di stato
             obj.clockPreviousState(serverId) = externalClock;
         end
     end 

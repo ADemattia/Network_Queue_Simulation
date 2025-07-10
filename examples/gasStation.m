@@ -1,9 +1,9 @@
 clc
 clear all 
 
-addpath(genpath('../core'));
-addpath(genpath('../utils'));
-addpath(genpath('../implementations'));
+addpath(genpath('core'));
+addpath(genpath('utils'));
+addpath(genpath('implementations'));
 
 rng(10); 
 
@@ -54,7 +54,7 @@ server5 = classicServer(numServer,serverDistribution, revenueFunction); % 5
 % SIMULAZIONE
 queueNodes = {gen1, queue2, server3, queue4, server5}; 
 queueGraph = [0, 1, 0, 0, 0; 0, 0, 1, 0, 0; 0, 0, 0, 1, 0; 0, 0, 0, 0, 1; 0, 0, 0, 0, 0];
-horizon = 40; 
+horizon = 100; 
 displayFlag = false; 
 
 simulator = simulator(horizon,queueNodes,queueGraph, displayFlag); 

@@ -1,9 +1,9 @@
 clear all
 clc 
 
-addpath(genpath('../core'));
-addpath(genpath('../utils'));
-addpath(genpath('../implementations'));
+addpath(genpath('core'));
+addpath(genpath('utils'));
+addpath(genpath('implementations'));
 
 rng(10)
 
@@ -25,7 +25,7 @@ queue2 = classicQueue(overtakingFlag, waitingFlag, capacity); % 2
 
 % SERVER 3 
 numServer = 1; 
-serviceRate1 = 1000;
+serviceRate1 = 3;
 pd2 = makedist('Exponential', 'mu', 1/serviceRate1);
 serverDistribution = @(n) random(pd2);
 revenueFunction = @(n) 0; 

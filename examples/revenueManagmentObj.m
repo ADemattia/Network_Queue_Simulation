@@ -2,9 +2,9 @@
 clc
 clear all
 
-addpath(genpath('../core'));
-addpath(genpath('../utils'));
-addpath(genpath('../implementations'));
+addpath(genpath('core'));
+addpath(genpath('utils'));
+addpath(genpath('implementations'));
 
 rng(10); 
 

@@ -1,9 +1,9 @@
 clear all
 clc
 
-addpath(genpath('../core'));
-addpath(genpath('../utils'));
-addpath(genpath('../implementations'));
+addpath(genpath('core'));
+addpath(genpath('utils'));
+addpath(genpath('implementations'));
 
 rng(10);
 arrivalRate = 1; 
@@ -17,14 +17,14 @@ typeDistribution = @(n) 1;
  
 gen1 = generator(interArrivalDistribution, numType, typeDistribution); % 1 
 
-% QUEUE 2 
-overtaking = 0; 
+% QUEUE 2 overtaking = 0; 
 hardCapacity = 10; 
 softCapacity = 6; 
 softCapacityDistribution = @(n) randi([0,1]);
 waitingFlag = false; 
+overtakingFlag = false;
 
-queue2 = balkingQueue(overtaking,waitingFlag, hardCapacity, softCapacity, softCapacityDistribution); % 2 
+queue2 = balkingQueue(overtakingFlag , waitingFlag, hardCapacity, softCapacity, softCapacityDistribution); % 2 
 
 % SERVER 3 
 numServer = 1; 

@@ -473,7 +473,7 @@ classdef simulator < handle
                     % tempo occupazione per ogni server
                     numServer = length(node.timeInFree);
                     for j = 1:numServer
-                        fprintf('   Server %d: Free = %.2f, Working = %.2f, Waiting = %.2f, Stuck = %.2f\n', j, ...
+                        fprintf('   Subserver %d: Free=%.2f, Working=%.2f, Waiting=%.2f, Stuck=%.2f\n', j, ...
                             node.timeInFree(j), node.timeInWorking(j), node.timeInWaiting(j), node.timeInStuck(j));
                     end
         

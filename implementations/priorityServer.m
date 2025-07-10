@@ -57,6 +57,7 @@ classdef priorityServer < server
             customerType = customer.type; 
  
             serverId = find(obj.serverState == serverState.Free, 1); % trova primo server libero 
+            obj.updateServerTime(serverId,externalClock); % aggiorna statistiche di tempo
             obj.serverState(serverId) = serverState.Working; % mette in stato occupato il server
             obj.customerToServer(serverId) = customer; % customer servito dal server scelto
            
@@ -85,11 +86,12 @@ classdef priorityServer < server
             end
         end
 
-        function addWaiting(obj)
+        function addWaiting(obj, externalClock)
             customer = obj.customerToServer(obj.eventServer); % customer a fine servizio
             obj.exitWaitingList(end+1) = customer; % customer aggiunto a lista di uscita
 
             obj.clockServer(obj.eventServer) = inf;     % tempo server riportato a inf
+            obj.updateServerTime(obj.eventServer,externalClock); % aggiorna statistiche di tempo
             obj.serverState(obj.eventServer) = serverState.Waiting;       % server in wait
 
             % schedula evento successivo 
@@ -109,7 +111,8 @@ classdef priorityServer < server
             arrivalQueue = obj.destinationQueue; 
             arrivalQueue.arrivalManagment(exitCustomer); 
 
-            obj.customerToServer(serverId) = customer();  % impostato customer di default     
+            obj.customerToServer(serverId) = customer();  % impostato customer di default
+            obj.updateServerTime(serverId,externalClock);
             obj.serverState(serverId) = serverState.Free;  % server ritorna libero
 
             if any(obj.serverState == serverState.Free) % aggiornamento stato disponibilità
@@ -132,7 +135,12 @@ classdef priorityServer < server
             obj.exitWaitingList = customer.empty();
             obj.clockServer = inf(obj.numServer,1);
             obj.countPerType = zeros(obj.numType,1);
-            obj.revenue = 0; 
+            obj.revenue = 0;
+            obj.timeInFree = zeros(obj.numServer,1); 
+            obj.timeInWorking = zeros(obj.numServer,1);
+            obj.timeInWaiting = zeros(obj.numServer,1);
+            obj.timeInStuck = zeros(obj.numServer,1);
+            obj.clockPreviousState = zeros(obj.numServer,1); % inizializzata a 0 
         end 
     end
 end

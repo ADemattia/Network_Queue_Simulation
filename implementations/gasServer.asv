@@ -164,11 +164,11 @@ classdef gasServer < server
             
             % verifica se server successii sono liberi 
             if all(obj.serverState(followingServers) == serverState.Free)
-                % tutti liberi, il customer può uscire senza problemi 
+                % tutti liberi, il customer può uscire senza problemi
                 obj.exitWaitingList(end+1) = customer; % customer aggiunto a lista waiting in uscita 
                 obj.clockServer(obj.eventServer) = inf;
                 obj.updateServerTime(obj.eventServer,externalClock);
-                obj.serverState(obj.eventServer) = serverState.Waiting; % server associato in stato Waiting, customer pronto ad uscire  
+                obj.serverState(obj.eventServer) = serverState.Waiting; % server associato in stato Waiting 
             else % almeno un server successivo è occupato (working, waiting, instuck) 
                 obj.exitStuckList(end+1) = customer; % customer aggiunto a lista dei bloccati nel traffico
                 obj.clockServer(obj.eventServer) = inf;
