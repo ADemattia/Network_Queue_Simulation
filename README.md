@@ -1,11 +1,24 @@
-# Simulatore a Eventi Discreti per Reti di Code
+# Simulazione a Eventi Discreti di Reti di Code
+
+Questo progetto fornisce un semplice **framework di simulazione a eventi discreti** sviluppato in **MATLAB**, pensato per modellare **reti di code** composte da generatori, code e server. L’obiettivo è studiare il comportamento di sistemi con dinamiche temporali, analizzando metriche come tempi di attesa, occupazione delle risorse e throughput.
+
+## Motivazione
+
+Abbiamo scelto di impostare la simulazione seguendo il paradigma delle **reti di code**, un approccio flessibile e intuitivo per rappresentare una vasta gamma di sistemi reali.
 
 ## Descrizione Generale
-Il progetto fornisce un **framework di simulazione a eventi discreti** in MATLAB per configurare e analizzare reti di servizi basate su code, generatori e server. È ideale per:
-- **Sistemi produttivi** con linee di montaggio
-- **Reti di servizi** (call center, sportelli)
-- **Stazioni di servizio** con vincoli fisici (gas station)
-- **Analisi di performance**: tempi di attesa, throughput, occupazione risorse
+
+Il progetto fornisce un **framework di simulazione a eventi discreti** sviluppato in **MATLAB**, progettato per configurare e analizzare **reti di code** costituite da generatori, code e server.
+
+Il modello è in grado di rappresentare efficacemente diversi sistemi reali basati su meccanismi di attesa e servizio, come ad esempio:
+
+- Linee di montaggio in ambito produttivo  
+- Sportelli o call center in ambito servizi  
+- Stazioni di servizio con risorse fisiche limitate  
+
+Grazie alla definizione di **classi personalizzabili**, la struttura del framework è **flessibile** e permette di adattare facilmente la logica della simulazione a scenari diversi, mantenendo una separazione chiara tra la gestione degli eventi e il comportamento degli elementi del sistema.
+
+Sono incluse funzionalità per l’analisi delle prestazioni, tra cui il calcolo di **tempi di attesa**, **throughput** e **occupazione delle risorse**.
 
 ---
 
@@ -38,15 +51,6 @@ Il progetto fornisce un **framework di simulazione a eventi discreti** in MATLAB
 
 ### utils/
 Funzioni di supporto per analisi, plotting e conversione dati.
-
-### examples/
-Script MATLAB che mostrano come configurare e avviare simulazioni per vari scenari:
-- `example_basic.m`: rete minimalista gen → coda → server
-- `example_mm1_balking.m`: M/M/1 con coda balking
-- `example_classicTest.m`: multiserver 2-linee, code infinite
-- `example_priority.m`: server con priorità e coda balking
-- `example_gasStation.m`: simulazione stazione gas + cassa
-- `example_trajectories.m`: estrazione e visualizzazione traiettorie clienti
 
 ---
 
@@ -85,21 +89,37 @@ Script MATLAB che mostrano come configurare e avviare simulazioni per vari scena
 ---
 
 ## Come Far Funzionare il Codice
-1. **Clonare ed entrare** nella directory del progetto:
-   ```bash
-   git clone https://github.com/<utente>/<repo>.git
-   cd <repo>
-   ```
-2. **Aprire MATLAB** nella root del progetto.
-3. **Aggiungere** tutte le cartelle al percorso:
+
+1. **Costruire la matrice di adiacenza** `queueGraph` (dimensione equal al numero di nodi). Un elemento `1` in posizione (i,j) indica un arco dal nodo i al nodo j: **Definire i nodi**: creare istanze di generatori, code e server. Es:
    ```matlab
-   addpath(genpath(pwd));
+   g1 = generator(@() exprnd(1), 1, @() 1);
+   q1 = classicQueue(false, false, inf);
+   s1 = classicServer(2, @() exprnd(2), @(~)0);
+   nodes = {g1, q1, s1};
    ```
-4. **Eseguire** uno script di esempio, ad esempio:
+2. **Costruire la matrice di adiacenza** `queueGraph` (dimensione equal al numero di nodi). Un elemento `1` in posizione (i,j) indica un arco dal nodo i al nodo j:
    ```matlab
-   run('examples/example_basic.m');
+   % g1→q1→s1
+   queueGraph = [0 1 0;
+                 0 0 1;
+                 0 0 0];
    ```
-5. **Risultati**: il terminale MATLAB mostrerà statistiche sul numero di clienti serviti, tempi medi di attesa, utilizzo dei server e altre metriche.
+3. **Istanziare e configurare** il simulatore:
+   ```matlab
+   horizon     = 100;      % tempo di simulazione
+   displayFlag = true;     % mostra debug passo-passo
+   sim = simulator(horizon, nodes, queueGraph, displayFlag);
+   sim.networkSetUp();
+   ```
+4. **Eseguire** la simulazione:
+   ```matlab
+   sim.excuteSimulation();
+   ```
+5. **Raccogliere statistiche**:
+   ```matlab
+   sim.collectStatistics();
+   sim.waitingTimeStatistic();
+   ```
 
 ---
 
