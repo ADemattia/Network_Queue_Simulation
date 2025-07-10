@@ -29,7 +29,6 @@ Sono incluse funzionalità per l’analisi delle prestazioni, tra cui il calcolo
 Contiene i componenti principali del framework di simulazione a eventi discreti.
 
 ---
----
 
 #### `customer.m`
 
