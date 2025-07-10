@@ -26,14 +26,17 @@ classdef balkingQueue < queue
         end
 
         function arrivalManagment(obj, customer)
+            customer.path(end + 1) = obj.id;
+            customer.startTime(obj.id) = obj.clock; % tempo entrata in coda 
+
             % politica di balking
             if obj.lengthQueue < obj.hardCapacity % posti hard
                 obj.customerList(end + 1) = customer;
                 obj.lengthQueue = obj.lengthQueue + 1; 
-                obj.count = obj.count + 12; % aggiornato conteggio 
+                obj.count = obj.count + 1; % aggiornato conteggio 
 
             elseif obj.lengthQueue >= obj.hardCapacity && obj.lengthQueue < obj.totalCapacity % posti soft 
-                    decision = obj.softCapacityDistribution(1); 
+                    decision = obj.softCapacityDistribution(); % campionamento decisione 
 
                     if decision == 1
                         obj.customerList(end + 1) = customer;
@@ -60,6 +63,7 @@ classdef balkingQueue < queue
             obj.lengthQueue = 0;
             obj.count = 0;
             obj.lostCustomer = 0;
+            obj.averageLength = 0; 
         end
 
         function printStats(obj)

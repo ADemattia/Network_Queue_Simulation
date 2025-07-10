@@ -1,6 +1,11 @@
 clear all
 clc 
 
+addpath(genpath('../core'));
+addpath(genpath('../utils'));
+addpath(genpath('../implementations'));
+
+rng(10)
 
 % GENERATOR 1 
 arrivalRate = 1; 
@@ -14,7 +19,7 @@ gen1 = generator(interArrivalDistribution, numType, typeDistribution); % 1
 % QUEUE 2 
 overtakingFlag = true; 
 waitingFlag = false; 
-capacity = inf; 
+capacity = inf; % capacità infinita
 
 queue2 = classicQueue(overtakingFlag, waitingFlag, capacity); % 2 
 
@@ -70,4 +75,10 @@ simulator.networkSetUp();
 simulator.excuteSimulation();
 
 statisticsArray = simulator.collectStatistics(); 
+statisticsArrayWaiting = simulator.waitingTimeStatistic(); 
+
+%simulator.displayCustomerTrajectories(); 
+%simulator.clearSimulator(); 
+%statisticsArray = simulator.collectStatistics();
+
 

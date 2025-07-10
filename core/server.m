@@ -45,9 +45,9 @@ classdef (Abstract) server < handle
             % istanziazioni caratteristiche 
               
             obj.numServer = numServer;  
-            obj.customerToServer = customer.empty(numServer, 0);  % indica quale customer sta servendo il server 
-            obj.serverState = repmat(serverState.Free, numServer, 1); % classe enumerazione 
-            obj.clockServer = inf(numServer,1); 
+            obj.customerToServer = repmat(customer(), obj.numServer, 1); % indica quale customer sta servendo il server 
+            obj.serverState = repmat(serverState.Free, obj.numServer, 1); % classe enumerazione 
+            obj.clockServer = inf(obj.numServer,1); 
             obj.serverDistribution = serverDistribution; 
             obj.revenueFunction = revenueFunction;
 

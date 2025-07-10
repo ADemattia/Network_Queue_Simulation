@@ -1,6 +1,11 @@
 %% REVENUE MANAGMENT 
 clc
 clear all
+
+addpath(genpath('../core'));
+addpath(genpath('../utils'));
+addpath(genpath('../implementations'));
+
 rng(10); 
 
 T = 60;
@@ -55,8 +60,12 @@ simulator.networkSetUp();
 simulator.excuteSimulation();
 
 statisticsArray = simulator.collectStatistics(); 
+statisticsArrayWaiting = simulator.waitingTimeStatistic(); 
+
+%simulator.displayCustomerTrajectories(); 
+%simulator.clearSimulator(); 
+%statisticsArray = simulator.collectStatistics();
+
 
 % attenzione conta per i generatori anche i customer che devono essere
 % indirizzati e per il server i customer in lavorazione 
-simulator.clearSimulator(); 
-%statisticsArray = simulator.collectStatistics();

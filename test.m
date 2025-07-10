@@ -31,209 +31,87 @@ for i = 1:100
 end 
 
 
-%% 
 
+%% Parametri del modello
+rng(10);
+lambda = 2;      % Tasso di arrivo
+mu = 3;          % Tasso di servizio
+s = 2;           % Numero di server
+T = 100;         % Tempo totale della simulazione
 
-% Definisco dati: arrivalRate, lowerProc1, upperProc1, lowerProc2, ...
-% upperProc2, bufferSize
-% Definisco (e inizializzo) variabili di stato:
-% clock, eventTimes (array per tre tipi eventi)
-% idle1, blocked1, idle2 (assumo variabili booleane;
-% ootrei usare variabili intere con codici di stato predefiniti)
-% queueLength, bufferLength, le due lunghezze di coda
-% startBlocked, totalBlocked per mercare inizio blocking e cumulare i tempi
-% horizon e' l'orizzonte simulato
-eventTimes = [exprnd(1/arrivalRate); inf; inf];
+% Inizializzazione distribuzioni esponenziali
+interArrivalDist = makedist('Exponential', 'mu', 1/lambda);
+serviceDist = makedist('Exponential', 'mu', 1/mu);
+
+% Inizializzazione variabili di stato
 clock = 0;
-while clock <= horizon % loop di simulazione
- [clock, idx] = min(eventTimes);
- switch idx
- case 1
- manageArrival();
- case 2
-     manageCompletion1();
- case 3
- manageCompletion2();
- end
-end
-% gestisco caso in cui la simulazione finisce in stato di blocking
-if blocked1
- totalBlocked = totalBlocked + clock -startBlocked;
-end
-fractionBlocked = totalBlocked /clock;
-%%%%%%%%%%%%%%%%%
-function manageArrival()
- eventTimes(1) = clock + exprnd(1/arrivalRate);
- if idle1 && (~blocked1) % macchina 1 libera (ma non bloccata)
- idle1 = false;
- eventTimes(2) = clock + unifrnd(lowerProc1,upperProc1);
- else
- queueLength = queueLength + 1;
- end
-end
-%%%%%%%%%%%%%%%%%%
-function manageCompletion1()
- % gestisco M1
- if bufferLength == bufferSize % buffer pieno, blocco
- idle1 = true;
- eventTimes(2) = inf;
- blocked1= true;
- startBlocked = clock;
- return; % non ho nulla da fare, esco
- else
- if queueLength > 0 % se coda, M1 passa al prossimo
- queueLength = queueLength - 1;
- eventTimes(2) = clock + unifrnd(lowerProc1,upperProc1);
- else % coda vuota, M1 idle
- idle1 = true;
- eventTimes(2) = inf;
- end
- end
- % gestisco M2 (non mi preoccupo di blocking)
- if idle2 % macchina 2 ferma, quindi buffer vuoto, parte 2
- idle2 = false;
- eventTimes(3) = clock + unifrnd(lowerProc2,upperProc2);
- else % 2 busy, metto pezzo in buffer
- bufferLength = bufferLength + 1;
- end
-end
-%%%%%%%%%%%%%%%%%%
-function manageCompletion2()
- % gestisco M2
- if bufferLength == 0 % buffer vuoto, M2 idle
- idle2 = true;
- eventTimes(3) = inf;
- else
- eventTimes(3) = clock + unifrnd(lowerProc2,upperProc2);
- bufferLenght = bufferLenght - 1;
- if blocked1 % eventuale sblocco di M1
- blocked1 = false;
- totalBlocked = totalBlocked + clock - startBlocked;
- if queueLength > 0 % M1 riparte
- queueLength = queueLength - 1;
- idle1 = false;
- eventTimes(2) = clock + unifrnd(lowerProc1,upperProc1);
- end
- end
- end
-end
+nextArrival = random(interArrivalDist);
+nextDeparture = inf(1, s);  % Uno per ogni server
+queue = [];                 % Coda (tempi di arrivo)
+busyServers = 0;
 
+% Statistiche
+numArrivals = 0;
+numDepartures = 0;
+areaQueue = 0;
+lastEventTime = 0;
 
-%% 
+fprintf('Simulazione M/M/%d avviata...\n\n', s);
 
-%% SCRIPT DI SIMULAZIONE - test.m
+% Ciclo della simulazione
+while clock < T
+    % Trova prossimo evento
+    [nextEventTime, eventIndex] = min([nextArrival, nextDeparture]);
+    clock = nextEventTime;
 
-% PARAMETRI DI SIMULAZIONE
-arrivalRate = 1.5;
-lowerProc1 = 0.5;
-upperProc1 = 1.0;
-lowerProc2 = 0.4;
-upperProc2 = 0.8;
-bufferSize = 5;
-horizon = 1000;
+    % Area sotto curva lunghezza coda
+    areaQueue = areaQueue + length(queue) * (clock - lastEventTime);
+    lastEventTime = clock;
 
-% INIZIALIZZAZIONE
-eventTimes = [exprnd(1/arrivalRate); inf; inf];
-clock = 0;
+    if eventIndex == 1
+        % ARRIVO
+        numArrivals = numArrivals + 1;
+        fprintf('ARRIVO al tempo %.2f\n', clock);
 
-idle1 = true;
-idle2 = true;
-blocked1 = false;
-
-queueLength = 0;
-bufferLength = 0;
-
-startBlocked = 0;
-totalBlocked = 0;
-
-% GLOBAL PER FUNZIONI LOCALI
-global clock eventTimes arrivalRate idle1 blocked1 lowerProc1 upperProc1 queueLength
-global bufferSize bufferLength idle2 lowerProc2 upperProc2 startBlocked totalBlocked
-
-% SIMULAZIONE
-while clock <= horizon
-    [clock, idx] = min(eventTimes);
-    switch idx
-        case 1
-            manageArrival();
-        case 2
-            manageCompletion1();
-        case 3
-            manageCompletion2();
-    end
-end
-
-if blocked1
-    totalBlocked = totalBlocked + clock - startBlocked;
-end
-
-fractionBlocked = totalBlocked / clock;
-fprintf('Tempo totale simulato: %.2f\n', clock);
-fprintf('Tempo totale di blocco: %.2f\n', totalBlocked);
-fprintf('Frazione di tempo in blocco: %.4f\n', fractionBlocked);
-
-%% === FUNZIONI LOCALI ===
-
-function manageArrival()
-    global clock eventTimes arrivalRate idle1 blocked1 lowerProc1 upperProc1 queueLength
-    eventTimes(1) = clock + exprnd(1/arrivalRate);
-    if idle1 && (~blocked1)
-        idle1 = false;
-        eventTimes(2) = clock + unifrnd(lowerProc1, upperProc1);
-    else
-        queueLength = queueLength + 1;
-    end
-end
-
-function manageCompletion1()
-    global clock eventTimes lowerProc1 upperProc1 bufferSize bufferLength ...
-           queueLength idle1 blocked1 startBlocked idle2 lowerProc2 upperProc2
-    if bufferLength == bufferSize
-        idle1 = true;
-        eventTimes(2) = inf;
-        blocked1 = true;
-        startBlocked = clock;
-        return;
-    else
-        if queueLength > 0
-            queueLength = queueLength - 1;
-            eventTimes(2) = clock + unifrnd(lowerProc1, upperProc1);
+        if busyServers < s
+            % C'è un server libero
+            busyServers = busyServers + 1;
+            idx = find(isinf(nextDeparture), 1);
+            nextDeparture(idx) = clock + random(serviceDist);
         else
-            idle1 = true;
-            eventTimes(2) = inf;
+            % Tutti occupati → metti in coda
+            queue(end+1) = clock;
         end
-    end
 
-    if idle2
-        idle2 = false;
-        eventTimes(3) = clock + unifrnd(lowerProc2, upperProc2);
+        % Pianifica prossimo arrivo
+        nextArrival = clock + random(interArrivalDist);
+
     else
-        bufferLength = bufferLength + 1;
-    end
-end
+        % USCITA (da uno dei server)
+        serverId = eventIndex - 1;
+        numDepartures = numDepartures + 1;
+        fprintf('USCITA al tempo %.2f (Server %d)\n', clock, serverId);
 
-function manageCompletion2()
-    global clock eventTimes bufferLength idle2 lowerProc2 upperProc2 ...
-           blocked1 totalBlocked startBlocked idle1 queueLength lowerProc1 upperProc1
-    if bufferLength == 0
-        idle2 = true;
-        eventTimes(3) = inf;
-    else
-        eventTimes(3) = clock + unifrnd(lowerProc2, upperProc2);
-        bufferLength = bufferLength - 1;
-
-        if blocked1
-            blocked1 = false;
-            totalBlocked = totalBlocked + clock - startBlocked;
-            if queueLength > 0
-                queueLength = queueLength - 1;
-                idle1 = false;
-                eventTimes(2) = clock + unifrnd(lowerProc1, upperProc1);
-            end
+        if ~isempty(queue)
+            % Servi prossimo in coda
+            arrivalTime = queue(1);
+            queue(1) = [];
+            nextDeparture(serverId) = clock + random(serviceDist);
+        else
+            % Libera il server
+            nextDeparture(serverId) = inf;
+            busyServers = busyServers - 1;
         end
     end
 end
 
+% Statistiche finali
+fprintf('\n========== RISULTATI ==========\n');
+fprintf('Clienti arrivati:     %d\n', numArrivals);
+fprintf('Clienti serviti:      %d\n', numDepartures);
+fprintf('Clienti in coda:      %d\n', length(queue));
+fprintf('Tempo totale:         %.2f\n', T);
+fprintf('Lunghezza media coda: %.4f\n', areaQueue / T);
 
 
 

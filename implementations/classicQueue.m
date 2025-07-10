@@ -16,13 +16,14 @@ classdef classicQueue < queue
         end
 
         function arrivalManagment(obj, customer)
-            % politica di balking
+            customer.path(end + 1) = obj.id;
+            customer.startTime(obj.id) = obj.clock; % tempo di entrata in coda 
+            % politica di rifiuto 
             if obj.lengthQueue < obj.capacity
                 obj.customerList(end + 1) = customer;
                 obj.lengthQueue = obj.lengthQueue + 1;
 
-                % se customer accettato, si aggiunge nel conteggio totale 
-                obj.count = obj.count + 1; 
+                obj.count = obj.count + 1;  % se customer accettato, si aggiunge nel conteggio totale  
 
             else % obj.lengthQueue == obj.capacity - tutto occupato 
                 obj.lostCustomer = obj.lostCustomer + 1; 
@@ -55,6 +56,7 @@ classdef classicQueue < queue
         obj.lengthQueue = 0;
         obj.count = 0;
         obj.lostCustomer = 0;
+        obj.averageLength = 0; 
         end
     end
 end

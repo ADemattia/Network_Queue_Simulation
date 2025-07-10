@@ -16,8 +16,9 @@ classdef (Abstract) queue < handle
         overtakingFlag % coda che permette i sorpassi di customer
         waitingFlag % flag: i customer sono persi o aspettano (per buffer) 
               
-        count (1,1) {mustBeInteger, mustBeNonnegative} % numero elementi totali in coda 
-        lostCustomer (1,1) {mustBeInteger, mustBeNonnegative} % numero customer persi
+        count  % numero di customer che sono stati in coda (non conta i persi) 
+        averageLength % lunghezza media 
+        lostCustomer  % numero customer persi
 
  
     end
@@ -31,6 +32,7 @@ classdef (Abstract) queue < handle
             obj.customerList = customer.empty(); 
             obj.lengthQueue = 0;  
             obj.count = 0; 
+            obj.averageLength = 0; 
             obj.lostCustomer = 0; 
 
             % istanziazioni caratteristiche
@@ -57,12 +59,24 @@ classdef (Abstract) queue < handle
         function exitMangement(obj, customer) 
               for i = length(obj.customerList):-1:1
                   if obj.customerList(i) == customer
+                      customer.endTime(obj.id) = obj.clock;  % tempo uscita da coda 
                       obj.customerList(i) = []; 
                       obj.lengthQueue = obj.lengthQueue - 1;
                       break;
                   end
               end
         end 
+
+        function clockUpdate(obj, externalClock) % aggiorna clock e lunghezza media 
+
+            clockDiff = externalClock - obj.clock; 
+            totalLength = obj.averageLength * obj.clock + clockDiff * obj.lengthQueue; 
+
+            obj.averageLength = totalLength/externalClock; 
+            obj.clock = externalClock; 
+
+        end 
+
 
     end
     methods (Abstract)

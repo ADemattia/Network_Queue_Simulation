@@ -124,6 +124,10 @@ classdef gasServer < server
         end
 
         function scheduleNextEvents(obj, customer, externalClock)
+
+            customer.path(end + 1) = obj.id;
+            customer.startTime(obj.id) = externalClock; % memorizza tempo entrata in server
+
             % eliminazione customer da coda 
             queueToUpdate = obj.selectedQueue; 
             queueToUpdate.exitMangement(customer); % gestione uscita customer da coda precedente 
@@ -149,7 +153,8 @@ classdef gasServer < server
             end
         end
 
-        function addWaiting(obj) % mette il server in modalità waiting e aggiorna prossimo evento 
+        function addWaiting(obj) % mette il server in modalità waiting e aggiorna prossimo evento
+            
 
             customer = obj.customerToServer(obj.eventServer); % customer a fine servizio
 
@@ -174,12 +179,14 @@ classdef gasServer < server
             [obj.clock, obj.eventServer] = min(obj.clockServer); % riassegnazione clock
         end 
 
-        function exitCustomer(obj)
+        function exitCustomer(obj, externalClock)
 
             obj.count = obj.count + 1; % aggiornamento customer serviti
             randomIndex = randi(length(obj.exitWaitingList));  % scegliamo customer in uscita casualmente 
             exitCustomer = obj.exitWaitingList(randomIndex);
             obj.exitWaitingList(randomIndex) = []; % rimuoviamo customer da waiting list
+
+            exitCustomer.endTime(obj.id) = externalClock; % memorizza tempo uscita da coda 
 
             arrivalQueue = obj.destinationQueue; % gestione arrivi in prossima coda 
             arrivalQueue.arrivalManagment(exitCustomer); % accoglienza nuovo customer
@@ -191,13 +198,14 @@ classdef gasServer < server
 
 
             i = length(obj.exitStuckList);
+
             while i >= 1 
                 stuckCustomer = obj.exitStuckList(i);
             
                 [found, stuckServerId] = obj.getServerFromCustomer(stuckCustomer); % server associato al customer
 
                 if found == false
-                    disp("Problemi")
+                    disp("There is something Wrong!!")
                     i = i - 1;
                     continue;  % Salta all'iterazione successiva
                 end
@@ -213,9 +221,7 @@ classdef gasServer < server
                     obj.exitWaitingList(end+1) = stuckCustomer; % customer aggiunto a lista waiting in uscita 
                     obj.exitStuckList(i) = []; 
                     obj.clockServer(stuckServerId) = inf;
-                    obj.serverState(stuckServerId) = serverState.Waiting; % server va in stato Waiting
-
-                    break; 
+                    obj.serverState(stuckServerId) = serverState.Waiting; % server va in stato Waiting 
                 else % non ancora libero
                    
                 end
@@ -238,9 +244,10 @@ classdef gasServer < server
             obj.clock = inf; 
             obj.count = 0; 
             obj.notFullyOccupied = 1; 
-            obj.customerToServer = customer.empty(obj.numServer, 0); 
+            obj.customerToServer = repmat(customer(), obj.numServer, 1); 
             obj.serverState = repmat(serverState.Free, obj.numServer, 1);
             obj.clockServer = inf(obj.numServer,1);
+            obj.exitWaitingList = customer.empty();
             obj.exitStuckList = customer.empty();
             obj.selectedServerId = []; 
             obj.revenue = 0; 

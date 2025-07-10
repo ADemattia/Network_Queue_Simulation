@@ -58,6 +58,9 @@ classdef generator < handle
 
             % chiamata a costruttore customer
             obj.customerGenerated = customer(type, obj.clock, obj.networkLength);
+            
+            obj.customerGenerated.path(end + 1) = obj.id; % aggiunge nuovo nodo a path 
+            obj.customerGenerated.startTime(obj.id) = obj.clock; 
 
             obj.count = obj.count + 1; % aggiorna conteggio totale 
             obj.countPerType(type) = obj.countPerType(type) + 1; % aggiorna conteggio per tipo 
@@ -66,6 +69,7 @@ classdef generator < handle
         % funzione che gestisce l'uscita del customer dal generatore 
         function customerExit(obj)
             customerInSystem = obj.customerGenerated; 
+            customerInSystem.endTime(obj.id) = obj.clock;  % tempo uscita 
             queue = obj.queueDestination; 
             queue.arrivalManagment(customerInSystem); % accoglienza nuovo customer in coda destinazione 
             obj.customerGenerated = customer(); % liberazione in generator 
@@ -76,7 +80,7 @@ classdef generator < handle
             obj.clock = 0;
             obj.customerGenerated = customer();
             obj.count = 0;
-            obj.countPerType = zeros(1, obj.numType);
+            obj.countPerType = zeros(obj.numType, 1);
         end
 
         % FUNZIONI INFORMATIVE 

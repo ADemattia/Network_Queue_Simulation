@@ -1,6 +1,10 @@
 clear all
 clc
 
+addpath(genpath('../core'));
+addpath(genpath('../utils'));
+addpath(genpath('../implementations'));
+
 rng(10);
 arrivalRate = 1; 
 serviceRate = 1.4; 
@@ -11,7 +15,7 @@ interArrivalDistribution = @(n) random(pd1);
 numType = 1; 
 typeDistribution = @(n) 1; 
  
-gen = generator(interArrivalDistribution, numType, typeDistribution); % 1 
+gen1 = generator(interArrivalDistribution, numType, typeDistribution); % 1 
 
 % QUEUE 2 
 overtaking = 0; 
@@ -20,7 +24,7 @@ softCapacity = 6;
 softCapacityDistribution = @(n) randi([0,1]);
 waitingFlag = false; 
 
-queue = balkingQueue(overtaking,waitingFlag, hardCapacity, softCapacity, softCapacityDistribution); % 2 
+queue2 = balkingQueue(overtaking,waitingFlag, hardCapacity, softCapacity, softCapacityDistribution); % 2 
 
 % SERVER 3 
 numServer = 1; 
@@ -28,10 +32,10 @@ pd2 = makedist('Exponential', 'mu', 1/serviceRate);
 serverDistribution = @(n) random(pd2);  
 revenueFunction = @(n) 0; 
 
-server = classicServer(numServer,serverDistribution, revenueFunction);  % 3 
+server3 = classicServer(numServer,serverDistribution, revenueFunction);  % 3 
 
 % SIMULAZIONE 
-queueNodes = {gen, queue, server}; 
+queueNodes = {gen1, queue2, server3}; 
 queueGraph = [0, 1, 0; 0, 0, 1; 0, 0, 0]; 
 horizon = 10150;  % per matchare con codice visto a lezione 
 displayFlag = false; 
@@ -41,8 +45,10 @@ simulator.networkSetUp();
 simulator.excuteSimulation(); 
 
 statisticsArray = simulator.collectStatistics(); 
+statisticsArrayWaiting = simulator.waitingTimeStatistic(); 
 
-simulator.clearSimulator(); 
-statisticsArray = simulator.collectStatistics();
+%simulator.displayCustomerTrajectories(); 
+%simulator.clearSimulator(); 
+%statisticsArray = simulator.collectStatistics();
 
 

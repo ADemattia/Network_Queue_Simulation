@@ -140,14 +140,13 @@ classdef simulator < handle
                     
                     contatore = contatore + 1;
                 end
-                %disp(obj.externalClock); 
-
 
                 % prossimo evento 
                 obj.externalClock = nextEvent; 
 
                 for k = 1:length(obj.queueArray) % aggiorniamo i clock di ogni coda 
-                    obj.queueArray(k).clock = obj.externalClock; % clock per coda servono a statistiche non per lista eventi 
+                    queueToClock = obj.queueArray(k); % clock per coda servono a statistiche non per lista eventi
+                    queueToClock.clockUpdate(obj.externalClock); % aggiorna anche lunghezza media 
                 end
 
                 if isa(eventNode, 'generator')
@@ -193,7 +192,7 @@ classdef simulator < handle
                     obj.eventsList(server.id) = server.clock; % aggiorna prossimo evento legato a server
     
                     if server.canExit() % verifica se si può rilasciare customer in coda
-                        server.exitCustomer();
+                        server.exitCustomer(obj.externalClock);
                         obj.eventsList(server.id) = server.clock;
 
                         if obj.displayFlag == true
@@ -202,7 +201,7 @@ classdef simulator < handle
 
 
                         while server.canExit() % verifica se si può svuotare ulteriormente la waiting list 
-                            server.exitCustomer();
+                            server.exitCustomer(obj.externalClock);
                             obj.eventsList(server.id) = server.clock;
 
                             if obj.displayFlag == true
@@ -234,7 +233,7 @@ classdef simulator < handle
 
                     [servicePossible, selectedCustomer] = server.checkAvailability();  % verifica disponibilità
 
-                    while servicePossible == 1 % servizio possibile
+                    while servicePossible == true % servizio possibile
                         server.scheduleNextEvents(selectedCustomer,obj.externalClock);
 
                         if obj.displayFlag == true
@@ -266,7 +265,7 @@ classdef simulator < handle
                 server = previousServers(i); 
                 exitAllowed = server.canExit();
                 if exitAllowed == true
-                    server.exitCustomer(); % inserito customer in coda
+                    server.exitCustomer(obj.externalClock); % inserito customer in coda
                     obj.eventsList(server.id) = server.clock;
 
                     % COMMENTO: se è possibile prendere in carico un nuovo
@@ -292,7 +291,119 @@ classdef simulator < handle
                     end
                 end
             end
-         end
+        end
+
+        function displayCustomerTrajectories(obj)
+            N = 10;
+        
+            q = obj.endQueue;
+            totalCustomers = length(q.customerList);
+            N = min(N, totalCustomers);
+        
+            % Scegli N clienti casuali
+            idxCustomers = randperm(totalCustomers, N);
+        
+            fprintf('\n========= TRAIETTORIE CUSTOMER CASUALI =========\n\n');
+        
+            for c = 1:N
+                customer = q.customerList(idxCustomers(c));
+                fprintf('Customer %d (ID %d):\n', c, idxCustomers(c));
+                fprintf('  %-20s %-10s %-10s\n', 'Nodo', 'Start Time', 'End Time'); % intestazione
+        
+                for j = 1:(length(customer.path)-1) 
+                    nodeIndex = customer.path(j);
+                    if nodeIndex <= length(obj.queueNodes) && nodeIndex > 0
+                        node = obj.queueNodes{nodeIndex};
+                        nodeLabel = sprintf('%s(%d)', class(node), node.id);
+                    else
+                        nodeLabel = sprintf('UnknownNode(%d)', nodeIndex);
+                    end
+                    st = customer.startTime(j);
+                    et = customer.endTime(j);
+        
+                    fprintf('  %-20s %10.3f %10.3f\n', nodeLabel, st, et);
+                end
+                fprintf('-----------------------------\n');
+            end
+        end
+
+
+        function statisticsArrayWaiting = waitingTimeStatistic(obj)
+            % customers: array di customer con campi arrivalTime, startTime e endTime
+            customerList     = obj.endQueue.customerList;
+            numEntities      = length(obj.queueNodes); 
+            waitingTimeTotal = zeros(numEntities,1);
+            totalCount       = zeros(numEntities,1); 
+            
+            % calcolo tempi totali e conteggi
+            for i = 1:length(customerList)
+                customer = customerList(i); 
+                for j = 1:numEntities
+                    if ~isnan(customer.endTime(j))
+                        totalCount(j) = totalCount(j) + 1;
+                        waitingTimeTotal(j) = waitingTimeTotal(j) + ...
+                            (customer.endTime(j) - customer.startTime(j));
+                    end 
+                end 
+            end 
+        
+            % calcolo tempi medi (evitando divisione per zero)
+            averageWaitingTime = NaN(numEntities,1);
+            for j = 1:numEntities
+                if totalCount(j) > 0
+                    averageWaitingTime(j) = waitingTimeTotal(j) / totalCount(j);
+                end
+            end
+        
+            % stampa delle statistiche di waiting time
+            fprintf('\n====== WAITING TIME STATISTICS ======\n');
+            statisticsArrayWaiting = cell(numEntities,1);
+            for j = 1:numEntities
+                node = obj.queueNodes{j};
+                stats = struct();
+                
+                % tipo di nodo
+                if isa(node, 'generator')
+                    stats.type = 'generator';
+                elseif isa(node, 'queue')
+                    stats.type = 'queue';
+                elseif isa(node, 'server')
+                    stats.type = 'server';
+                else
+                    stats.type = 'unknown';
+                end
+                
+                stats.id      = node.id;
+                stats.count   = totalCount(j);
+                stats.avgWait = averageWaitingTime(j);
+        
+                switch stats.type
+                    case 'generator'
+                        nodeLabel = 'Generatore';
+                    case 'queue'
+                        nodeLabel = 'Coda';
+                    case 'server'
+                        nodeLabel = 'Server';
+                end
+        
+                if isnan(stats.avgWait)
+                    fprintf('%s ID %d (%s): nessun cliente servito\n', ...
+                            nodeLabel, stats.id, stats.type);
+                else
+                    fprintf('%s ID %d (%s): clienti serviti = %d, tempo medio di attesa = %.2f\n', ...
+                            nodeLabel, stats.id, stats.type, stats.count, stats.avgWait);
+                end
+        
+                statisticsArrayWaiting{j} = stats;
+            end
+            fprintf('======================================\n\n');
+        end
+
+
+        
+
+
+
 
          function displaySystemState(obj)
             fprintf('\n========= SYSTEM STATE =========\n\n');
@@ -346,8 +457,9 @@ classdef simulator < handle
                     stats.lostCustomer = node.lostCustomer;
                     stats.lengthQueue = node.lengthQueue;
                     stats.count = node.count;  % <-- conteggio totale clienti passati
-                    fprintf('Coda ID %d: clienti totali = %d, persi = %d, lunghezza finale = %d\n', ...
-                            node.id, node.count, node.lostCustomer, node.lengthQueue);
+                    stats.averageLength = node.averageLength; 
+                    fprintf('Coda ID %d: clienti totali = %d, persi = %d, lunghezza finale = %d, lunghezza media = %.2f\n', ...
+                            node.id, node.count, node.lostCustomer, node.lengthQueue, node.averageLength);
                         
                 elseif isa(node, 'server')
                     stats.type = 'server';
@@ -365,6 +477,9 @@ classdef simulator < handle
         
             fprintf('======================================\n\n');
          end
+
+         
+
 
          function clearSimulator(obj)
 
@@ -392,7 +507,8 @@ classdef simulator < handle
             obj.eventsList(:) = inf;
         
             fprintf('Tutte le statistiche sono state azzerate.\n');
-        end
+         end
+
 
     end
 end

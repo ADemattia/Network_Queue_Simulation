@@ -3,10 +3,10 @@ classdef customer < handle
     %   Detailed explanation goes here
     properties
         id
-        % tempo di nascita processo 
-        birthTime = NaN; 
-        startTime = NaN; 
-        endTime = NaN; 
+        birthTime  % tempo di nascita processo
+        startTime % tempo di entrata in un nodo del grafo 
+        endTime % tempo di uscita 
+        path % nodi percorsi 
         type 
 
     end
@@ -19,9 +19,10 @@ classdef customer < handle
                 % customer reale 
                 obj.id = customerIdGenerator.getId();
                 obj.birthTime = clock;
-                obj.startTime = NaN(networkLength,1); 
-                obj.endTime = NaN(networkLength,1); 
+                obj.startTime = NaN(networkLength + 1,1); % consideriamo la coda finale di accumulo 
+                obj.endTime = NaN(networkLength + 1,1); 
                 obj.type = type;
+                obj.path = []; % non si conosce lungheza a priori
             end
         end
 
