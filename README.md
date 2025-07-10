@@ -25,17 +25,95 @@ Sono incluse funzionalità per l’analisi delle prestazioni, tra cui il calcolo
 ## Classi Principali e Funzionalità
 
 ### core/
-- **`simulator.m`**: motore a eventi discreti. Gestisce l'orologio globale, il calendario eventi, l'avanzamento della simulazione e la raccolta delle statistiche.
-- **`queue.m`**: classe astratta per definire l'interfaccia di una coda. Metodi obbligatori:
-  - `arrivalManagment(obj, customer)`
-  - `isQueueAvailable(obj)`
-  - `clearQueue(obj)`
-- **`server.m`**: classe astratta per definire l'interfaccia di un server. Metodi obbligatori:
-  - `[servicePossible, customer] = checkAvailability(obj)`
-  - `scheduleNextEvents(obj, customer, clock)`
-  - `addWaiting(obj, clock)`
-  - `exitCustomer(obj, clock)`
-  - `clearServer(obj)`
+
+Contiene i componenti principali del framework di simulazione a eventi discreti.
+
+---
+---
+
+#### `customer.m`
+
+Rappresenta il cliente come oggetto base nella simulazione.
+
+**Proprietà principali:**
+
+- `startTime`: vettore dei tempi di ingresso in ciascun nodo della rete  
+- `endTime`: vettore dei tempi di uscita da ciascun nodo  
+- `path`: sequenza dei nodi attraversati  
+- `type`: categoria o tipologia del cliente
+
+I clienti vengono generati con un tipo e un tempo di nascita, quindi si spostano attraverso i nodi della rete (generatori, code, server), aggiornando il percorso e i tempi di servizio. Questo permette di tracciare il comportamento e le performance del sistema a livello di singolo cliente.
+
+
+#### `simulator.m`
+
+Motore principale della simulazione. Si occupa di:
+
+- Gestire l’orologio globale
+- Mantenere e aggiornare il calendario degli eventi
+- Avanzare il tempo della simulazione
+- Attivare dinamicamente i metodi di generatori, code e server
+- Raccogliere le statistiche finali
+
+**Nota:** le relazioni tra entità (es. collegamenti tra generatori, code e server) sono inizializzate direttamente dal `simulator`.
+
+---
+
+#### `queue.m`
+
+Classe astratta che definisce l’interfaccia di una coda.
+
+Metodi obbligatori:
+
+- `arrivalManagment(obj, customer)`  
+  Gestisce l'arrivo di un cliente nella coda.
+
+- `isQueueAvailable(obj)`  
+  Controlla se la coda può accettare un nuovo cliente.
+
+- `exitManagement(obj, customer)`  
+  Gestisce l'uscita di un cliente dalla coda, ad esempio inoltrandolo a un server.
+
+- `clearQueue(obj)`  
+  Ripristina lo stato interno e le statistiche della coda.
+
+---
+
+#### `server.m`
+
+Classe astratta per la definizione del comportamento dei server.
+
+Metodi obbligatori:
+
+- `[servicePossible, customer] = checkAvailability(obj)`  
+  Verifica se il server è libero e restituisce un cliente da servire, se presente.
+
+- `scheduleNextEvents(obj, customer, clock)`  
+  Pianifica l'evento di completamento del servizio.
+
+- `addWaiting(obj, clock)`  
+  Aggiunge un cliente alla lista d’attesa del server.
+
+- `exitCustomer(obj, clock)`  
+  Gestisce l’uscita del cliente dal server e aggiorna le statistiche.
+
+- `clearServer(obj)`  
+  Resetta lo stato del server e le metriche raccolte.
+
+---
+
+#### `generator.m`
+
+Classe concreta che rappresenta un generatore di clienti nella rete.
+
+Metodi principali:
+
+- `scheduleNextArrival()`  
+  Pianifica il prossimo arrivo generando un nuovo cliente con tipo e orario casuali. Aggiorna lo stato interno.
+
+- `customerExit()`  
+  Gestisce l’uscita del cliente dal generatore e lo inoltra alla coda di destinazione.
+
 
 ### implementations/
 - **`generator.m`**: genera arrivi secondo una distribuzione specificata e assegna tipi di cliente.
@@ -59,6 +137,7 @@ Funzioni di supporto per analisi, plotting e conversione dati.
 /project-root
 │
 ├─ core/
+│   ├─ customer.m 
 │   ├─ generator.m
 │   ├─ simulator.m
 │   ├─ queue.m
