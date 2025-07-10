@@ -1,0 +1,38 @@
+classdef customer < handle
+    %CUSTOMER Summary of this class goes here
+    %   Detailed explanation goes here
+    properties
+        id
+        % tempo di nascita processo 
+        birthTime = NaN; 
+        startTime = NaN; 
+        endTime = NaN; 
+        type 
+        revenue
+
+    end
+    
+    methods
+        function obj = customer(type,revenue)
+            if nargin == 0
+                obj.type = 0;
+                obj.revenue = 0;
+            else 
+                % customer reale 
+                obj.id = customerIdGenerator.getId(); 
+                obj.type = type;
+                obj.revenue = revenue;
+            end
+        end
+
+        function dispCustomer(obj)
+            disp(['ID: ', num2str(obj.id)]);
+            disp(['Type: ', num2str(obj.type)]);
+            disp(['Revenue: ', num2str(obj.revenue)]);
+        end
+        
+        function outputArg = method1(obj,inputArg)
+        end
+    end
+end
+

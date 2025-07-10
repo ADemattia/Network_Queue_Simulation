@@ -1,0 +1,48 @@
+clear all
+clc
+
+rng(10);
+arrivalRate = 1; 
+serviceRate = 1.4; 
+
+% GENERATOR 1 
+pd1 = makedist('Exponential', 'mu', 1/arrivalRate);
+interArrivalDistribution = @(n) random(pd1); 
+numType = 1; 
+typeDistribution = @(n) 1; 
+ 
+gen = generator(interArrivalDistribution, numType, typeDistribution); % 1 
+
+% QUEUE 2 
+overtaking = 0; 
+hardCapacity = 10; 
+softCapacity = 6; 
+softCapacityDistribution = @(n) randi([0,1]);
+waitingFlag = false; 
+
+queue = balkingQueue(overtaking,waitingFlag, hardCapacity, softCapacity, softCapacityDistribution); % 2 
+
+% SERVER 3 
+numServer = 1; 
+pd2 = makedist('Exponential', 'mu', 1/serviceRate);
+serverDistribution = @(n) random(pd2);  
+revenueFunction = @(n) 0; 
+
+server = classicServer(numServer,serverDistribution, revenueFunction);  % 3 
+
+% SIMULAZIONE 
+queueNodes = {gen, queue, server}; 
+queueGraph = [0, 1, 0; 0, 0, 1; 0, 0, 0]; 
+horizon = 10150;  % per matchare con codice visto a lezione 
+displayFlag = false; 
+
+simulator = simulator(horizon,queueNodes,queueGraph, displayFlag); 
+simulator.networkSetUp(); 
+simulator.excuteSimulation(); 
+
+statisticsArray = simulator.collectStatistics(); 
+
+simulator.clearSimulator(); 
+statisticsArray = simulator.collectStatistics();
+
+
