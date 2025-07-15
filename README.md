@@ -1,3 +1,14 @@
+# Attenzione importante sul branch *Improved* (15/07) 
+
+Il branch **Improved** contiene una versione migliore del progetto, caratterizzata da una maggiore chiarezza nella struttura del codice e da una generalizzazione. Non è più limitata esclusivamente alla simulazione di reti di code, ma supporta simulazioni ad eventi generali.  
+
+In questa versione è incluso un esempio di simulazione del modello epidemico SIR, oltre a quelli precedenti dedicati alle code.  
+
+Nei prossimi giorni verranno aggiunti un README dedicato e l’implementazione della dinamica **Best Response** per giochi.
+
+---
+
+
 # Simulazione a Eventi Discreti di Reti di Code
 
 Questo progetto fornisce un semplice **framework di simulazione a eventi discreti** sviluppato in **MATLAB**, pensato per modellare **reti di code** composte da generatori, code e server. L’obiettivo è studiare il comportamento di sistemi con dinamiche temporali, analizzando metriche come tempi di attesa, occupazione delle risorse e throughput.
